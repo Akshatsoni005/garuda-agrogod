@@ -127,6 +127,9 @@
 
       <!-- Quick Action Buttons -->
       <div class="flex space-x-2">
+        <a href="/gods_eye.html" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-400 text-cyan-200 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-black transition flex items-center space-x-1 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+          <span>🌐 3D God's View</span>
+        </a>
         <button onclick="toggleFLIR()" id="flir-btn" class="bg-gray-900/90 hover:bg-gray-800 border border-emerald-500/50 text-emerald-300 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition">
           FLIR Thermal
         </button>
@@ -228,6 +231,164 @@
       <button onclick="closeRoiModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-black py-2.5 rounded font-bold uppercase tracking-wider">
         Acknowledge & Close
       </button>
+    </div>
+  </div>
+
+  <!-- Biological Central Complex (CX) Ring Attractor Navigation Modal -->
+  <div id="bio-nav-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-gray-950 border border-indigo-500/80 p-6 rounded-2xl max-w-5xl w-full text-xs space-y-4 shadow-[0_0_50px_rgba(99,102,241,0.25)] max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center border-b border-indigo-500/40 pb-3">
+        <div class="flex items-center space-x-3">
+          <div class="w-3 h-3 bg-indigo-400 rounded-full animate-ping"></div>
+          <div>
+            <h3 class="text-xl font-black text-indigo-400 font-orbitron tracking-wider">
+              BIOLOGICAL NAVIGATION // CENTRAL COMPLEX (CX) RING ATTRACTORS
+            </h3>
+            <p class="text-[10px] text-gray-400">
+              Drosophila Ellipsoid Body (EB) compass + Fan-Shaped Body (FB) vector path integration | Zero GPS | Zero Magnetometer Drift
+            </p>
+          </div>
+        </div>
+        <button onclick="closeBioNavModal()" class="text-gray-400 hover:text-white text-xl font-bold px-2 py-1">✕</button>
+      </div>
+
+      <!-- Main 3-Column Neuromorphic Navigation Deck -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- Column 1: Ellipsoid Body (EB) 16-Wedge Ring Attractor -->
+        <div class="bg-gray-900/90 p-4 rounded-xl border border-indigo-500/30 flex flex-col items-center space-y-3">
+          <div class="w-full flex justify-between items-center border-b border-gray-800 pb-1.5">
+            <span class="font-bold text-indigo-300 font-orbitron">ELLIPSOID BODY (EB)</span>
+            <span class="text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded">16 E-PG WEDGES</span>
+          </div>
+
+          <!-- Circular Canvas Rendering the 16-wedge Bump -->
+          <div class="relative w-52 h-52 flex items-center justify-center">
+            <canvas id="eb-ring-canvas" width="208" height="208" class="rounded-full shadow-[0_0_20px_rgba(99,102,241,0.2)]"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+              <span class="text-[9px] text-gray-400 uppercase tracking-widest">HEADING</span>
+              <span id="cx-heading-deg" class="text-2xl font-black text-white font-orbitron">000.0°</span>
+              <span id="cx-coherence" class="text-[10px] text-indigo-400 font-bold">COHERENCE: 85%</span>
+            </div>
+          </div>
+
+          <!-- Protocerebral Bridge (PB) Shifter Bars -->
+          <div class="w-full space-y-2 pt-1 border-t border-gray-800 text-[11px]">
+            <div class="flex justify-between text-gray-400">
+              <span>PB LEFT P-EN (CCW YAW):</span>
+              <span id="pb-left-val" class="text-indigo-300 font-bold">0.00</span>
+            </div>
+            <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+              <div id="pb-left-bar" class="bg-indigo-400 h-full w-0 transition-all duration-75"></div>
+            </div>
+
+            <div class="flex justify-between text-gray-400">
+              <span>PB RIGHT P-EN (CW YAW):</span>
+              <span id="pb-right-val" class="text-indigo-300 font-bold">0.00</span>
+            </div>
+            <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+              <div id="pb-right-bar" class="bg-indigo-400 h-full w-0 transition-all duration-75"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Fan-Shaped Body (FB) Path Integrator & Home Vector -->
+        <div class="bg-gray-900/90 p-4 rounded-xl border border-indigo-500/30 flex flex-col items-center space-y-3">
+          <div class="w-full flex justify-between items-center border-b border-gray-800 pb-1.5">
+            <span class="font-bold text-emerald-400 font-orbitron">FAN-SHAPED BODY (FB)</span>
+            <span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded">P-FN VECTOR MEMORY</span>
+          </div>
+
+          <!-- Radar Canvas showing Home Vector -->
+          <div class="relative w-52 h-52 flex items-center justify-center">
+            <canvas id="fb-radar-canvas" width="208" height="208" class="rounded-full border border-emerald-500/30 bg-gray-950/80"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+              <span class="text-[9px] text-gray-400 uppercase tracking-widest">HOME DISTANCE</span>
+              <span id="fb-dist-home" class="text-2xl font-black text-emerald-400 font-orbitron">0.0 m</span>
+              <span id="fb-bearing-home" class="text-[10px] text-emerald-300 font-bold">BEARING: 000.0°</span>
+            </div>
+          </div>
+
+          <!-- Dead Reckoning Coordinates & PFL3 Steering -->
+          <div class="w-full space-y-1.5 pt-1 border-t border-gray-800 text-[11px] text-gray-300">
+            <div class="flex justify-between">
+              <span>DISPLACEMENT (E / N):</span>
+              <span class="text-white font-bold"><span id="fb-disp-x">0.0</span>m / <span id="fb-disp-y">0.0</span>m</span>
+            </div>
+            <div class="flex justify-between">
+              <span>PFL3 MOTOR STEERING:</span>
+              <span id="pfl3-steer-cmd" class="text-yellow-400 font-bold">0.00 rad/s (HOLD)</span>
+            </div>
+            <div class="flex justify-between">
+              <span>MAVLINK 2.0 PROTOCOL:</span>
+              <span class="text-cyan-400 font-bold">#331 ODOMETRY ACTIVE</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 3: GPS-Denied Autonomous Benchmark & Controls -->
+        <div class="bg-gray-900/90 p-4 rounded-xl border border-indigo-500/30 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex justify-between items-center border-b border-gray-800 pb-1.5">
+              <span class="font-bold text-yellow-400 font-orbitron">GPS-DENIED BENCHMARK</span>
+              <span class="text-[10px] bg-red-950 text-red-300 border border-red-500/40 px-2 py-0.5 rounded">GPS BLACKOUT</span>
+            </div>
+            <p class="text-[10px] text-gray-400 mt-2 leading-relaxed">
+              Drone ESC motors (80A) trigger severe electromagnetic field distortion. Under dense tree canopy, GPS lock is lost.
+            </p>
+
+            <!-- Scoreboard -->
+            <div class="mt-3 bg-gray-950 p-3 rounded-lg border border-gray-800 space-y-2 text-[11px]">
+              <div class="flex justify-between items-center">
+                <span class="text-red-400">Naive Dead Reckoning Drift:</span>
+                <span id="bench-dr-drift" class="text-red-400 font-black text-sm">-- m</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-emerald-400">Biological Central Complex:</span>
+                <span id="bench-bio-drift" class="text-emerald-400 font-black text-sm">-- m</span>
+              </div>
+              <div class="border-t border-gray-800 pt-1.5 flex justify-between items-center font-bold">
+                <span class="text-yellow-400">DRIFT ERROR REDUCTION:</span>
+                <span id="bench-reduction-pct" class="text-yellow-400 font-black text-base">--%</span>
+              </div>
+              <div class="flex justify-between items-center text-[10px] text-cyan-300">
+                <span>PFL3 Homing Result:</span>
+                <span id="bench-homing-status" class="font-bold">STANDBY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="space-y-2 pt-2">
+            <button onclick="runBioNavSimulation()" id="run-sim-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg uppercase tracking-wider text-xs shadow-[0_0_15px_rgba(99,102,241,0.4)] transition flex items-center justify-center space-x-2">
+              <span>🚀 Run 60s Flight Benchmark</span>
+            </button>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="stepBioNavClock()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 py-1.5 rounded text-[10px] font-bold uppercase transition">
+                ⚡ Step Clock (+50ms)
+              </button>
+              <button onclick="downloadMavlinkOdometry()" class="bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-300 py-1.5 rounded text-[10px] font-bold uppercase transition">
+                ⬇ MAVLink Odom
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Live Flight Map Trace Legend -->
+      <div class="bg-gray-950 p-2.5 rounded-lg border border-indigo-500/20 flex flex-wrap justify-between items-center text-[10px] text-gray-400">
+        <div class="flex items-center space-x-4">
+          <span class="font-bold text-white uppercase">Map Corridors:</span>
+          <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded-full bg-white"></span><span>Ground Truth</span></span>
+          <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span><span>Naive Dead Reckoning (ESC Glitch)</span></span>
+          <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span><span>Central Complex Biological Path</span></span>
+        </div>
+        <span class="text-indigo-300 font-mono">Drosophila Melanogaster Ring Attractor (Kim et al. 2017)</span>
+      </div>
+
     </div>
   </div>
 
@@ -398,6 +559,8 @@
         applyVrtStatus(msg.data.spraying);
       } else if (msg.type === 'MISSION_GENERATED') {
         renderFlightCorridors(msg.data.waypoints);
+      } else if (msg.type === 'BIO_NAV_TELEMETRY') {
+        updateBioNavHUD(msg.data);
       }
     };
 
@@ -535,6 +698,275 @@
       };
 
       recognition.start();
+    }
+
+    // 10. Biological Central Complex (CX) Ring Attractor Engine & Visualizer
+    let bioNavLayer = null;
+    let bioNavActive = false;
+    let latestBioNavData = null;
+
+    function openBioNavModal() {
+      playBeep(1100, 'sine', 0.15);
+      document.getElementById('bio-nav-modal').classList.remove('hidden');
+      fetchBioNavState();
+    }
+
+    function closeBioNavModal() {
+      document.getElementById('bio-nav-modal').classList.add('hidden');
+    }
+
+    async function fetchBioNavState() {
+      try {
+        const res = await fetch('/api/bio-nav/state');
+        const data = await res.json();
+        latestBioNavData = data;
+        updateBioNavHUD(data);
+      } catch (e) {
+        console.warn('BioNav state fetch error:', e);
+      }
+    }
+
+    function updateBioNavHUD(d) {
+      if (!d) return;
+      document.getElementById('cx-heading-deg').innerText = (d.heading_deg || 0).toFixed(1) + '°';
+      document.getElementById('cx-coherence').innerText = 'COHERENCE: ' + Math.round((d.bump_coherence || 0.85) * 100) + '%';
+
+      if (d.displacement_x_m !== undefined) {
+        document.getElementById('fb-disp-x').innerText = d.displacement_x_m.toFixed(1);
+        document.getElementById('fb-disp-y').innerText = d.displacement_y_m.toFixed(1);
+      }
+      if (d.home_distance_m !== undefined) {
+        document.getElementById('fb-dist-home').innerText = d.home_distance_m.toFixed(1) + ' m';
+        document.getElementById('fb-bearing-home').innerText = 'BEARING: ' + (d.home_bearing_deg || 0).toFixed(1) + '°';
+      }
+
+      if (d.homing_steering_cmd_rad_s !== undefined) {
+        const cmd = d.homing_steering_cmd_rad_s;
+        const dir = Math.abs(cmd) < 0.05 ? 'HOLD' : (cmd > 0 ? 'RIGHT TURN' : 'LEFT TURN');
+        document.getElementById('pfl3-steer-cmd').innerText = (cmd >= 0 ? '+' : '') + cmd.toFixed(2) + ' rad/s (' + dir + ')';
+      }
+
+      // Protocerebral Bridge Shifters
+      const maxLeft = Math.max(0.01, ...(d.pb_left_shifters || [0]));
+      const maxRight = Math.max(0.01, ...(d.pb_right_shifters || [0]));
+      const leftPct = Math.min(100, Math.round((maxLeft / 1.5) * 100));
+      const rightPct = Math.min(100, Math.round((maxRight / 1.5) * 100));
+      document.getElementById('pb-left-bar').style.width = leftPct + '%';
+      document.getElementById('pb-right-bar').style.width = rightPct + '%';
+      document.getElementById('pb-left-val').innerText = maxLeft.toFixed(2);
+      document.getElementById('pb-right-val').innerText = maxRight.toFixed(2);
+
+      drawEbRing(d.eb_firing_rates || [], d.heading_rad || 0);
+      drawFbRadar(d.displacement_x_m || 0, d.displacement_y_m || 0, (d.home_bearing_deg || 0) * Math.PI / 180);
+    }
+
+    function drawEbRing(rates, headingRad) {
+      const canvas = document.getElementById('eb-ring-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const cx = w / 2, cy = h / 2;
+      const outerR = 95, innerR = 60;
+      const numWedges = rates.length || 16;
+      const dTheta = (2 * Math.PI) / numWedges;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Dark torus background
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR + 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#050914';
+      ctx.fill();
+
+      // Render 16 wedges with firing rate intensity
+      const maxRate = Math.max(0.01, ...rates);
+      for (let i = 0; i < numWedges; i++) {
+        const startAng = i * dTheta - Math.PI / 2;
+        const endAng = startAng + dTheta;
+        const normRate = (rates[i] || 0) / maxRate;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, startAng, endAng);
+        ctx.arc(cx, cy, innerR, endAng, startAng, true);
+        ctx.closePath();
+
+        // Glowing gradient: indigo base to brilliant cyan/emerald for bump peak
+        if (normRate > 0.4) {
+          ctx.fillStyle = `rgba(0, 255, 204, ${0.2 + 0.8 * normRate})`;
+          ctx.strokeStyle = '#00ffcc';
+          ctx.lineWidth = 1.5;
+        } else {
+          ctx.fillStyle = `rgba(99, 102, 241, ${0.1 + 0.3 * normRate})`;
+          ctx.strokeStyle = 'rgba(99, 102, 241, 0.4)';
+          ctx.lineWidth = 0.5;
+        }
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // Compass needle
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(headingRad - Math.PI / 2);
+      ctx.beginPath();
+      ctx.moveTo(0, -innerR + 6);
+      ctx.lineTo(5, -innerR + 18);
+      ctx.lineTo(-5, -innerR + 18);
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#00ffcc';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawFbRadar(dispX, dispY, homeBearingRad) {
+      const canvas = document.getElementById('fb-radar-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const cx = w / 2, cy = h / 2;
+      const maxRange = Math.max(40, Math.hypot(dispX, dispY) * 1.3);
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Range rings
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
+      ctx.lineWidth = 1;
+      [0.33, 0.66, 1.0].forEach(frac => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, 90 * frac, 0, 2 * Math.PI);
+        ctx.stroke();
+      });
+
+      // Crosshairs
+      ctx.beginPath();
+      ctx.moveTo(cx, 10); ctx.lineTo(cx, h - 10);
+      ctx.moveTo(10, cy); ctx.lineTo(w - 10, cy);
+      ctx.stroke();
+
+      // Home origin
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      // Drone current position dot (relative to home)
+      const scale = 85 / maxRange;
+      const dronePxX = cx + (dispX * scale);
+      const dronePxY = cy - (dispY * scale);
+      ctx.beginPath();
+      ctx.arc(dronePxX, dronePxY, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#eab308';
+      ctx.shadowColor = '#eab308';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+
+      // Home Vector Arrow from drone back to origin
+      ctx.beginPath();
+      ctx.moveTo(dronePxX, dronePxY);
+      ctx.lineTo(cx, cy);
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    async function stepBioNavClock() {
+      playBeep(900, 'triangle', 0.08);
+      try {
+        const res = await fetch('/api/bio-nav/step', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dt: 0.05,
+            gyro_z_rad_s: 0.25,
+            forward_speed_m_s: 2.8
+          })
+        });
+        const data = await res.json();
+        updateBioNavHUD(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function runBioNavSimulation() {
+      playBeep(1200, 'sine', 0.2);
+      const btn = document.getElementById('run-sim-btn');
+      btn.innerText = '⏳ Simulating Ring Attractor & Path...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/bio-nav/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            duration_s: 60.0,
+            wind_gust_strength: 0.6,
+            mag_drift_deg_per_min: 45.0,
+            gyro_bias_rad_s: 0.02
+          })
+        });
+        const sim = await res.json();
+        const s = sim.benchmark_summary;
+
+        document.getElementById('bench-dr-drift').innerText = s.final_dead_reckoning_drift_m.toFixed(1) + ' m';
+        document.getElementById('bench-bio-drift').innerText = s.final_biological_drift_m.toFixed(1) + ' m';
+        document.getElementById('bench-reduction-pct').innerText = s.drift_reduction_pct.toFixed(1) + '%';
+        document.getElementById('bench-homing-status').innerText = s.homing_success ? 'SUCCESS (LOCKED & HOMED)' : 'HOMING ACTIVE';
+        document.getElementById('bench-homing-status').className = s.homing_success ? 'text-emerald-400 font-bold' : 'text-yellow-400 font-bold';
+
+        // Render trajectory traces on Leaflet Map
+        renderBioNavTrajectories(sim.trajectory_samples);
+
+        // Animate latest neural snapshots
+        if (sim.neural_snapshots && sim.neural_snapshots.length > 0) {
+          const lastSnap = sim.neural_snapshots[sim.neural_snapshots.length - 1];
+          drawEbRing(lastSnap.rates, 0);
+        }
+
+        playBeep(1600, 'sine', 0.3);
+        btn.innerText = '✓ Benchmark Complete (' + s.drift_reduction_pct.toFixed(1) + '% Drift Reduction)';
+      } catch (err) {
+        console.error(err);
+        btn.innerText = 'Simulation Failed';
+      } finally {
+        setTimeout(() => {
+          btn.innerText = '🚀 Run 60s Flight Benchmark';
+          btn.disabled = false;
+        }, 4000);
+      }
+    }
+
+    function renderBioNavTrajectories(traj) {
+      if (!traj || !map) return;
+      if (bioNavLayer) map.removeLayer(bioNavLayer);
+
+      const latMPerDeg = 111139.0;
+      const lonMPerDeg = 111139.0 * Math.cos(farmCenter[0] * Math.PI / 180);
+
+      const toLatLng = (pt) => [
+        farmCenter[0] + (pt.y / latMPerDeg),
+        farmCenter[1] + (pt.x / lonMPerDeg)
+      ];
+
+      const gtCoords = traj.ground_truth.map(toLatLng);
+      const drCoords = traj.naive_dead_reckoning.map(toLatLng);
+      const bioCoords = traj.biological_central_complex.map(toLatLng);
+
+      const gtPoly = L.polyline(gtCoords, { color: '#ffffff', weight: 2, opacity: 0.6, dashArray: '4, 6' });
+      const drPoly = L.polyline(drCoords, { color: '#ef4444', weight: 2.5, opacity: 0.85 });
+      const bioPoly = L.polyline(bioCoords, { color: '#10b981', weight: 3.5, opacity: 0.95 });
+
+      bioNavLayer = L.layerGroup([gtPoly, drPoly, bioPoly]).addTo(map);
+      map.fitBounds(bioPoly.getBounds().pad(0.2));
+    }
+
+    function downloadMavlinkOdometry() {
+      playBeep(850, 'triangle', 0.1);
+      window.location.href = '/api/bio-nav/mavlink_odometry';
     }
   </script>
 </body>

@@ -20,6 +20,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from ml.diagnose import evaluate_crop_health, calculate_ndvi
 from ml.real_satellite_ndvi import compute_real_ndvi_raster, generate_vrt_prescription_zones, create_synthetic_field_reflectance
 from ml.real_crop_cv import detect_foliar_pathology_and_triggers, create_synthetic_crop_image
+from ml.central_complex import BiologicalNavigationSystem, run_gps_denied_flight_benchmark
 from server.planner import generate_vrt_flight_mission, export_mavlink_wpl110, calculate_spray_drift
 from server.real_mavlink_mission import create_mavlink_mission_items, serialize_mission_to_qgc_wpl
 
@@ -105,6 +106,19 @@ class RoiRequest(BaseModel):
     farm_area_acres: float = 5.0
     crop_type: str = "Wheat"
     spray_passes_per_season: int = 3
+
+class BioNavStepRequest(BaseModel):
+    dt: float = 0.05
+    gyro_z_rad_s: float = 0.0
+    forward_speed_m_s: float = 2.5
+    lateral_speed_m_s: float = 0.0
+    visual_cue_heading: Optional[float] = None
+
+class BioNavSimulateRequest(BaseModel):
+    duration_s: float = 60.0
+    wind_gust_strength: float = 0.6
+    mag_drift_deg_per_min: float = 45.0
+    gyro_bias_rad_s: float = 0.02
 
 @app.post("/api/telemetry/drone")
 async def receive_drone_telemetry(data: DronePacket):
@@ -230,6 +244,41 @@ async def export_real_mavlink2_mission():
         headers={"Content-Disposition": "attachment; filename=garuda_ardupilot_vrt.waypoints"}
     )
 
+# --- Biological Central Complex (CX) Navigation Endpoints ---
+active_bio_nav = BiologicalNavigationSystem()
+
+@app.post("/api/bio-nav/step")
+async def step_bio_navigation(req: BioNavStepRequest):
+    telemetry = active_bio_nav.step(
+        dt=req.dt,
+        gyro_z_rad_s=req.gyro_z_rad_s,
+        forward_speed_m_s=req.forward_speed_m_s,
+        lateral_speed_m_s=req.lateral_speed_m_s,
+        visual_cue_heading=req.visual_cue_heading
+    )
+    await broadcast({"type": "BIO_NAV_TELEMETRY", "data": telemetry})
+    return telemetry
+
+@app.get("/api/bio-nav/state")
+async def get_bio_navigation_state():
+    telemetry = active_bio_nav.step(dt=0.0, gyro_z_rad_s=0.0, forward_speed_m_s=0.0)
+    return telemetry
+
+@app.post("/api/bio-nav/simulate")
+async def simulate_gps_denied_flight(req: BioNavSimulateRequest):
+    res = run_gps_denied_flight_benchmark(
+        flight_duration_s=req.duration_s,
+        wind_gust_strength=req.wind_gust_strength,
+        mag_drift_deg_per_min=req.mag_drift_deg_per_min,
+        gyro_bias_rad_s=req.gyro_bias_rad_s
+    )
+    await broadcast({"type": "BIO_NAV_SIMULATION_RESULT", "data": res})
+    return res
+
+@app.get("/api/bio-nav/mavlink_odometry")
+async def get_mavlink_odometry(alt_m: float = 12.0):
+    return active_bio_nav.generate_mavlink_odometry_packet(alt_m=alt_m)
+
 @app.websocket("/ws/cockpit")
 async def cockpit_websocket(websocket: WebSocket):
     await websocket.accept()
@@ -250,6 +299,13 @@ async def cockpit_websocket(websocket: WebSocket):
 CLIENT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "client"))
 if os.path.exists(CLIENT_DIR):
     app.mount("/static", StaticFiles(directory=CLIENT_DIR), name="static")
+
+@app.get("/gods_eye.html")
+async def get_gods_eye():
+    file_path = os.path.join(CLIENT_DIR, "gods_eye.html")
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return {"error": "gods_eye.html not found"}
 
 @app.get("/")
 async def root():

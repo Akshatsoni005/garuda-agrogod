@@ -16,8 +16,14 @@ from server.main import (
     run_real_computer_vision_spot_detect,
     export_real_mavlink2_mission,
     calculate_farmer_roi,
+    step_bio_navigation,
+    simulate_gps_denied_flight,
+    get_mavlink_odometry,
+    BioNavStepRequest,
+    BioNavSimulateRequest,
     RoiRequest
 )
+from ml.central_complex import run_gps_denied_flight_benchmark
 from ml.real_satellite_ndvi import compute_real_ndvi_raster, generate_vrt_prescription_zones, create_synthetic_field_reflectance
 from ml.real_crop_cv import detect_foliar_pathology_and_triggers, create_synthetic_crop_image
 from server.real_mavlink_mission import create_mavlink_mission_items, serialize_mission_to_qgc_wpl
@@ -65,13 +71,35 @@ async def test_fastapi_real_endpoints():
 
     res_mav = await export_real_mavlink2_mission()
     assert "QGC WPL 110" in res_mav.body.decode()
-    print("  ✓ All FastAPI real endpoints verified.")
+
+    # Test Bio-Nav FastAPI endpoints
+    res_bio_step = await step_bio_navigation(BioNavStepRequest(dt=0.05, gyro_z_rad_s=0.5, forward_speed_m_s=3.0))
+    assert res_bio_step["bump_coherence"] > 0.8
+    
+    res_bio_odom = await get_mavlink_odometry(12.0)
+    assert res_bio_odom["mavlink_msg"] == "ODOMETRY"
+
+    gods_eye_path = os.path.join(os.path.dirname(__file__), "..", "client", "gods_eye.html")
+    assert os.path.exists(gods_eye_path), "gods_eye.html missing!"
+    with open(gods_eye_path, "r") as f:
+        gods_eye_content = f.read()
+    assert "cesiumContainer" in gods_eye_content
+    assert "Cesium.Viewer" in gods_eye_content
+    print("  ✓ All FastAPI real endpoints and 3D God's Eye View assets verified.")
+
+def test_central_complex_biological_navigation():
+    print("[5/5] Testing Central Complex Ring Attractor GPS-Denied Benchmark...")
+    res = run_gps_denied_flight_benchmark(30.0)
+    assert res["benchmark_summary"]["drift_reduction_pct"] > 85.0
+    print(f"  ✓ Biological Attractor Coherence: {res['benchmark_summary']['biological_attractor_coherence']}")
+    print(f"  ✓ Drift Reduction vs Magnetometer Glitch: {res['benchmark_summary']['drift_reduction_pct']}%")
 
 if __name__ == "__main__":
     test_real_satellite_processing()
     test_real_computer_vision_spot_spray()
     test_official_ardupilot_mavlink()
     asyncio.run(test_fastapi_real_endpoints())
+    test_central_complex_biological_navigation()
     print("\n=======================================================")
     print("  [SUCCESS] 100% OF REAL SCIENTIFIC PIPELINES PASSED!  ")
     print("=======================================================")
