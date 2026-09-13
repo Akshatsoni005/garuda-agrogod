@@ -134,15 +134,22 @@
 
       <!-- Camera Perspectives & Mode Toggles -->
       <div class="flex items-center space-x-2">
+        <select id="farm-preset-select" onchange="switch3DFarm(this.value)" class="bg-gray-950 border border-emerald-500/50 text-emerald-300 text-xs px-2 py-1.5 rounded font-bold outline-none cursor-pointer">
+          <option value="punjab_wheat">🌾 Punjab Wheat (Ludhiana)</option>
+          <option value="haryana_paddy">🌾 Haryana Paddy (Karnal)</option>
+          <option value="rajasthan_canal">🚜 Rajasthan Canal (Sri Ganganagar)</option>
+          <option value="maharashtra_sugarcane">🎋 Maharashtra Sugarcane (Baramati)</option>
+        </select>
+
         <div class="bg-black/60 border border-emerald-500/40 rounded p-1 flex space-x-1 text-xs font-bold">
           <button onclick="setCameraView('orbital')" id="cam-orbital-btn" class="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
-            Orbit (600km)
+            Orbit (750km)
           </button>
           <button onclick="setCameraView('chase')" id="cam-chase-btn" class="px-2.5 py-1 rounded bg-emerald-700 text-black font-black transition">
             3D Chase Cam
           </button>
           <button onclick="setCameraView('nadir')" id="cam-nadir-btn" class="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
-            Survey (150m)
+            Survey (280m)
           </button>
         </div>
 
@@ -150,8 +157,8 @@
           FLIR
         </button>
 
-        <a href="/" class="bg-gray-900/90 hover:bg-gray-800 border border-gray-600 text-gray-300 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition">
-          2D Deck
+        <a href="/" class="bg-emerald-950 hover:bg-emerald-900 border border-emerald-400 text-emerald-200 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-black transition flex items-center space-x-1 shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+          <span>🛰️ GEE Workbench</span>
         </a>
       </div>
     </div>
@@ -260,10 +267,14 @@
 
     // 2. Initialize Cesium 3D Globe with Photorealistic Satellite Imagery (Zero Token Needed)
     Cesium.Ion.defaultAccessToken = ''; // Open provider fallback
+    const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      maximumLevel: 19,
+      credit: 'Esri World Imagery'
+    });
+
     const viewer = new Cesium.Viewer('cesiumContainer', {
-      imageryProvider: new Cesium.ArcGisMapServerImageryProvider({
-        url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
-      }),
+      baseLayer: new Cesium.ImageryLayer(esriImageryProvider),
       baseLayerPicker: false,
       geocoder: false,
       homeButton: false,
@@ -284,21 +295,57 @@
     viewer.scene.skyAtmosphere.show = true;
     viewer.scene.skyBox.show = true;
 
-    // Farm Ground Coordinates (Rajasthan, India)
-    const farmCenterLon = 75.787300;
-    const farmCenterLat = 26.912400;
-    let droneAltMeters = 14.5;
+    // Real Agricultural Farmland Coordinates (Punjab Wheat Belt, India)
+    let farmCenterLon = 75.865000;
+    let farmCenterLat = 30.852500;
+    let droneAltMeters = 15.0;
 
-    // 3. Farm Boundary Polygon in 3D
+    // Immediately focus camera directly on the agricultural fields (ZERO OCEAN/WATER FLASH)
+    viewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(farmCenterLon, farmCenterLat - 0.0035, 480.0),
+      orientation: {
+        heading: Cesium.Math.toRadians(0.0),
+        pitch: Cesium.Math.toRadians(-50.0),
+        roll: 0.0
+      }
+    });
+
+    const FARMS_3D = {
+      punjab_wheat: {
+        name: 'Punjab Wheat Belt (Ludhiana)',
+        lon: 75.8650,
+        lat: 30.8525,
+        polygon: [75.8620, 30.8545, 75.8685, 30.8545, 75.8685, 30.8505, 75.8620, 30.8505],
+        stress: { lon: 75.8665, lat: 30.8530, label: 'SECTOR 04: YELLOW RUST (NDVI 0.28)' }
+      },
+      haryana_paddy: {
+        name: 'Haryana Basmati Basin (Karnal)',
+        lon: 76.9850,
+        lat: 29.6920,
+        polygon: [76.9820, 29.6940, 76.9880, 29.6940, 76.9880, 29.6900, 76.9820, 29.6900],
+        stress: { lon: 76.9860, lat: 29.6925, label: 'SECTOR 02: BACTERIAL BLIGHT (NDVI 0.31)' }
+      },
+      rajasthan_canal: {
+        name: 'Rajasthan Canal Oasis (Sri Ganganagar)',
+        lon: 73.8800,
+        lat: 29.9200,
+        polygon: [73.8760, 29.9230, 73.8840, 29.9230, 73.8840, 29.9170, 73.8760, 29.9170],
+        stress: { lon: 73.8815, lat: 29.9205, label: 'CANAL SECTOR: WHITE RUST (NDVI 0.26)' }
+      },
+      maharashtra_sugarcane: {
+        name: 'Maharashtra Sugarcane (Baramati)',
+        lon: 74.5770,
+        lat: 18.1510,
+        polygon: [74.5740, 18.1530, 74.5800, 18.1530, 74.5800, 18.1490, 74.5740, 18.1490],
+        stress: { lon: 74.5780, lat: 18.1515, label: 'PLOT 07: RED ROT CHLOROSIS (NDVI 0.32)' }
+      }
+    };
+
+    // 3. Farm Boundary Polygon in 3D (Lush Punjab Wheat Grid)
     const farmPolygon3D = viewer.entities.add({
-      name: 'Garuda Farm Sector 04',
+      name: 'Garuda Farm Sector 04 - Punjab Wheat',
       polygon: {
-        hierarchy: Cesium.Cartesian3.fromDegreesArray([
-          75.7858, 26.9135,
-          75.7888, 26.9135,
-          75.7888, 26.9113,
-          75.7858, 26.9113
-        ]),
+        hierarchy: Cesium.Cartesian3.fromDegreesArray(FARMS_3D.punjab_wheat.polygon),
         material: Cesium.Color.fromCssColorString('#00ffcc').withAlpha(0.08),
         outline: true,
         outlineColor: Cesium.Color.fromCssColorString('#00ffcc').withAlpha(0.8),
@@ -309,7 +356,7 @@
     // 4. Ground IoT Station Entity in 3D
     const groundSensorNode = viewer.entities.add({
       name: 'ESP32 Ground Station',
-      position: Cesium.Cartesian3.fromDegrees(75.7870, 26.9120, 0),
+      position: Cesium.Cartesian3.fromDegrees(75.8640, 30.8510, 0),
       point: {
         pixelSize: 10,
         color: Cesium.Color.CYAN,
@@ -317,7 +364,7 @@
         outlineWidth: 2
       },
       label: {
-        text: 'ESP32 IOT NODE',
+        text: 'ESP32 IOT NODE (PUNJAB)',
         font: '10px monospace',
         fillColor: Cesium.Color.CYAN,
         outlineColor: Cesium.Color.BLACK,
@@ -342,11 +389,11 @@
       } else {
         stressVolumeEntity = viewer.entities.add({
           name: 'NDVI Yellow Rust Stress Zone',
-          position: Cesium.Cartesian3.fromDegrees(75.7878, 26.9128, 10),
+          position: Cesium.Cartesian3.fromDegrees(75.8665, 30.8530, 10),
           cylinder: {
             length: 20.0,
-            topRadius: 35.0,
-            bottomRadius: 35.0,
+            topRadius: 40.0,
+            bottomRadius: 40.0,
             material: Cesium.Color.RED.withAlpha(0.4),
             outline: true,
             outlineColor: Cesium.Color.RED.withAlpha(0.9)
@@ -501,10 +548,44 @@
       }
     });
 
-    // 8. Dynamic Camera Perspectives
+    // 8. Dynamic Camera Perspectives & Multi-Region AOI
     let currentCameraMode = 'chase';
     let currentLon = farmCenterLon;
     let currentLat = farmCenterLat;
+
+    function switch3DFarm(farmId) {
+      playBeep(1100);
+      const f = FARMS_3D[farmId] || FARMS_3D.punjab_wheat;
+      farmCenterLon = f.lon;
+      farmCenterLat = f.lat;
+      currentLon = f.lon;
+      currentLat = f.lat;
+      dronePosition = Cesium.Cartesian3.fromDegrees(f.lon, f.lat, droneAltMeters);
+      groundPosition = Cesium.Cartesian3.fromDegrees(f.lon, f.lat, 0.0);
+
+      // Update 3D farm boundary
+      farmPolygon3D.polygon.hierarchy = Cesium.Cartesian3.fromDegreesArray(f.polygon);
+      farmPolygon3D.name = f.name;
+
+      // Update IoT ground sensor node
+      groundSensorNode.position = Cesium.Cartesian3.fromDegrees(f.lon - 0.0008, f.lat - 0.0008, 0.0);
+      groundSensorNode.label.text = `ESP32 IOT NODE (${f.name.split(' ')[0].toUpperCase()})`;
+
+      // Update stress cylinder
+      if (stressVolumeEntity) {
+        stressVolumeEntity.position = Cesium.Cartesian3.fromDegrees(f.stress.lon, f.stress.lat, 10);
+        stressVolumeEntity.label.text = f.stress.label;
+      }
+
+      setCameraView(currentCameraMode);
+      logTerminal(`Switched 3D AOI: ${f.name} [${f.lat.toFixed(4)}°N, ${f.lon.toFixed(4)}°E]`);
+
+      fetch('/api/gee/switch_farm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ farm_id: farmId })
+      }).catch(() => {});
+    }
 
     function setCameraView(mode) {
       playBeep(900);
@@ -517,7 +598,7 @@
       if (mode === 'orbital') {
         document.getElementById('cam-orbital-btn').className = 'px-2.5 py-1 rounded bg-emerald-700 text-black font-black';
         viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(currentLon, currentLat - 4.0, 650000.0),
+          destination: Cesium.Cartesian3.fromDegrees(farmCenterLon, farmCenterLat - 5.0, 750000.0),
           orientation: {
             heading: Cesium.Math.toRadians(0.0),
             pitch: Cesium.Math.toRadians(-55.0),
@@ -525,11 +606,11 @@
           },
           duration: 2.0
         });
-        logTerminal('Camera switched: Low Earth Orbital View (650 km).');
+        logTerminal('Camera switched: Low Earth Orbital View (750 km over India).');
       } else if (mode === 'chase') {
         document.getElementById('cam-chase-btn').className = 'px-2.5 py-1 rounded bg-emerald-700 text-black font-black';
         viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(currentLon, currentLat - 0.0003, droneAltMeters + 20.0),
+          destination: Cesium.Cartesian3.fromDegrees(currentLon, currentLat - 0.00035, droneAltMeters + 18.0),
           orientation: {
             heading: Cesium.Math.toRadians(0.0),
             pitch: Cesium.Math.toRadians(-35.0),
@@ -537,19 +618,19 @@
           },
           duration: 1.5
         });
-        logTerminal('Camera locked: Tactical 3D Chase Camera (25m AGL).');
+        logTerminal('Camera locked: Tactical 3D Chase Camera (33m AGL).');
       } else if (mode === 'nadir') {
         document.getElementById('cam-nadir-btn').className = 'px-2.5 py-1 rounded bg-emerald-700 text-black font-black';
         viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(currentLon, currentLat, 180.0),
+          destination: Cesium.Cartesian3.fromDegrees(currentLon, currentLat, 280.0),
           orientation: {
             heading: Cesium.Math.toRadians(0.0),
-            pitch: Cesium.Math.toRadians(-75.0),
+            pitch: Cesium.Math.toRadians(-80.0),
             roll: 0.0
           },
           duration: 1.5
         });
-        logTerminal('Camera switched: Orthomosaic Survey View (180m AGL).');
+        logTerminal('Camera switched: Orthomosaic Survey View (280m AGL).');
       }
     }
 
@@ -562,8 +643,13 @@
     const loc = window.location;
     const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = loc.hostname || 'localhost';
-    const wsPort = loc.port || '8000';
-    const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}/ws/cockpit`;
+    let wsUrl = `${wsProtocol}//${wsHost}`;
+    if (loc.port && loc.port !== '80' && loc.port !== '443') {
+      wsUrl += `:${loc.port}`;
+    } else if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
+      wsUrl += ':8000';
+    }
+    wsUrl += '/ws/cockpit';
 
     const socket = new WebSocket(wsUrl);
 

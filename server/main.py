@@ -39,35 +39,226 @@ connected_websockets: Set[WebSocket] = set()
 # In-memory flight mission cache
 latest_mission_cache: Dict[str, Any] = {}
 
+FARM_PRESETS = {
+    "punjab_wheat": {
+        "id": "punjab_wheat",
+        "name": "Punjab Wheat Belt (Ludhiana)",
+        "state": "Punjab, India",
+        "center": [30.852500, 75.865000],
+        "zoom": 17,
+        "crop": "Triticum aestivum (HD-3086 Wheat)",
+        "growth_stage": "Feekes 10.1 (Flowering & Early Heading)",
+        "soil_type": "Alluvial Loam (Indo-Gangetic Basin)",
+        "lai": 3.48,
+        "chlorophyll_spad": 48.6,
+        "soil_moisture_pct": 24.8,
+        "canopy_temp_c": 22.4,
+        "air_temp_c": 24.8,
+        "temp_depression_c": -2.4,
+        "fapar": 0.85,
+        "target_disease": "Puccinia striiformis (Yellow Rust)",
+        "chemical_name": "Azoxystrobin 18.2% + Difenoconazole 11.4% SC",
+        "blanket_rate_ml_acre": 200,
+        "total_acres": 5.0,
+        "infested_acres": 0.625,
+        "chemical_saved_pct": 87.5,
+        "money_saved_inr": 3850,
+        "water_saved_liters": 900,
+        "reflectance": {
+            "b02_blue": 0.024,
+            "b03_green": 0.052,
+            "b04_red": 0.038,
+            "b08_nir": 0.512,
+            "b11_swir": 0.145,
+            "ndvi": 0.862,
+            "ndwi": -0.472
+        },
+        "polygon": [
+            [30.8545, 75.8620],
+            [30.8545, 75.8685],
+            [30.8505, 75.8685],
+            [30.8505, 75.8620]
+        ],
+        "stress_hotspot": {
+            "lat": 30.8530,
+            "lon": 75.8665,
+            "radius_m": 38.0,
+            "ndvi": 0.275,
+            "cause": "Yellow Rust Pustule Outbreak (Sector 04)"
+        }
+    },
+    "haryana_paddy": {
+        "id": "haryana_paddy",
+        "name": "Haryana Basmati Basin (Karnal)",
+        "state": "Haryana, India",
+        "center": [29.692000, 76.985000],
+        "zoom": 17,
+        "crop": "Oryza sativa (Pusa Basmati 1121)",
+        "growth_stage": "Tillering / Active Panicle Initiation",
+        "soil_type": "Clay Loam (Puddled Paddy Soil)",
+        "lai": 3.85,
+        "chlorophyll_spad": 45.2,
+        "soil_moisture_pct": 36.5,
+        "canopy_temp_c": 26.2,
+        "air_temp_c": 29.0,
+        "temp_depression_c": -2.8,
+        "fapar": 0.88,
+        "target_disease": "Xanthomonas oryzae (Bacterial Leaf Blight)",
+        "chemical_name": "Copper Oxychloride 50% WP + Streptomycin",
+        "blanket_rate_ml_acre": 250,
+        "total_acres": 6.2,
+        "infested_acres": 0.95,
+        "chemical_saved_pct": 84.7,
+        "money_saved_inr": 4200,
+        "water_saved_liters": 1150,
+        "reflectance": {
+            "b02_blue": 0.028,
+            "b03_green": 0.065,
+            "b04_red": 0.042,
+            "b08_nir": 0.540,
+            "b11_swir": 0.180,
+            "ndvi": 0.856,
+            "ndwi": -0.500
+        },
+        "polygon": [
+            [29.6940, 76.9820],
+            [29.6940, 76.9880],
+            [29.6900, 76.9880],
+            [29.6900, 76.9820]
+        ],
+        "stress_hotspot": {
+            "lat": 29.6925,
+            "lon": 76.9860,
+            "radius_m": 42.0,
+            "ndvi": 0.310,
+            "cause": "Bacterial Leaf Blight Wilting"
+        }
+    },
+    "rajasthan_canal": {
+        "id": "rajasthan_canal",
+        "name": "Indira Gandhi Canal Oasis (Sri Ganganagar)",
+        "state": "Rajasthan, India",
+        "center": [29.920000, 73.880000],
+        "zoom": 16,
+        "crop": "Brassica juncea (Mustard / Pusa Bold)",
+        "growth_stage": "Flowering & Siliqua Development",
+        "soil_type": "Sandy Loam (Canal Irrigated)",
+        "lai": 2.95,
+        "chlorophyll_spad": 42.1,
+        "soil_moisture_pct": 19.4,
+        "canopy_temp_c": 21.8,
+        "air_temp_c": 25.5,
+        "temp_depression_c": -3.7,
+        "fapar": 0.79,
+        "target_disease": "Albugo candida (White Rust of Mustard)",
+        "chemical_name": "Mancozeb 75% WP + Metalaxyl 8%",
+        "blanket_rate_ml_acre": 300,
+        "total_acres": 8.0,
+        "infested_acres": 1.10,
+        "chemical_saved_pct": 86.2,
+        "money_saved_inr": 5100,
+        "water_saved_liters": 1400,
+        "reflectance": {
+            "b02_blue": 0.035,
+            "b03_green": 0.070,
+            "b04_red": 0.050,
+            "b08_nir": 0.480,
+            "b11_swir": 0.210,
+            "ndvi": 0.811,
+            "ndwi": -0.391
+        },
+        "polygon": [
+            [29.9230, 73.8760],
+            [29.9230, 73.8840],
+            [29.9170, 73.8840],
+            [29.9170, 73.8760]
+        ],
+        "stress_hotspot": {
+            "lat": 29.9205,
+            "lon": 73.8815,
+            "radius_m": 45.0,
+            "ndvi": 0.260,
+            "cause": "White Rust Pustule Blistering"
+        }
+    },
+    "maharashtra_sugarcane": {
+        "id": "maharashtra_sugarcane",
+        "name": "Baramati Sugarcane Belt (Pune Basin)",
+        "state": "Maharashtra, India",
+        "center": [18.151000, 74.577000],
+        "zoom": 17,
+        "crop": "Saccharum officinarum (Co 86032)",
+        "growth_stage": "Grand Growth / Internode Elongation",
+        "soil_type": "Black Cotton Soil (Vertisol)",
+        "lai": 4.60,
+        "chlorophyll_spad": 52.4,
+        "soil_moisture_pct": 31.0,
+        "canopy_temp_c": 25.0,
+        "air_temp_c": 28.5,
+        "temp_depression_c": -3.5,
+        "fapar": 0.92,
+        "target_disease": "Colletotrichum falcatum (Red Rot)",
+        "chemical_name": "Carbendazim 50% WP (Spot Drench/Spray)",
+        "blanket_rate_ml_acre": 350,
+        "total_acres": 4.5,
+        "infested_acres": 0.50,
+        "chemical_saved_pct": 88.9,
+        "money_saved_inr": 3600,
+        "water_saved_liters": 850,
+        "reflectance": {
+            "b02_blue": 0.020,
+            "b03_green": 0.048,
+            "b04_red": 0.030,
+            "b08_nir": 0.590,
+            "b11_swir": 0.130,
+            "ndvi": 0.903,
+            "ndwi": -0.520
+        },
+        "polygon": [
+            [18.1530, 74.5740],
+            [18.1530, 74.5800],
+            [18.1490, 74.5800],
+            [18.1490, 74.5740]
+        ],
+        "stress_hotspot": {
+            "lat": 18.1515,
+            "lon": 74.5780,
+            "radius_m": 35.0,
+            "ndvi": 0.320,
+            "cause": "Red Rot Interveinal Chlorosis"
+        }
+    }
+}
+
 current_state = {
     "drone": {
         "device_id": "garuda_drone_alpha",
-        "lat": 26.912400,
-        "lon": 75.787300,
-        "alt": 12.5,
+        "lat": 30.852500,
+        "lon": 75.865000,
+        "alt": 15.0,
         "battery": 98,
         "spraying": False,
         "seq": 0
     },
     "field": {
         "node_id": "garuda_ground_node_01",
-        "lat": 26.912000,
-        "lon": 75.787000,
-        "temp_c": 29.5,
-        "humidity_pct": 58.0,
-        "soil_moisture_pct": 42.0
+        "lat": 30.852000,
+        "lon": 75.864500,
+        "temp_c": 24.8,
+        "humidity_pct": 62.0,
+        "soil_moisture_pct": 24.8
     },
     "weather": {
-        "wind_speed_kmh": 8.5,
-        "wind_direction_deg": 140,
+        "wind_speed_kmh": 6.8,
+        "wind_direction_deg": 135,
         "safety_status": "OPTIMAL_CONDITIONS",
-        "recommended_buffer_m": 3.2
+        "recommended_buffer_m": 2.8
     },
     "vrt_stats": {
         "status": "STANDBY",
-        "chemical_saved_pct": 62.4,
-        "saved_liters": 14.8,
-        "money_saved_inr": 4850
+        "chemical_saved_pct": 87.5,
+        "saved_liters": 18.2,
+        "money_saved_inr": 3850
     }
 }
 
@@ -243,6 +434,111 @@ async def export_real_mavlink2_mission():
         wpl_content,
         headers={"Content-Disposition": "attachment; filename=garuda_ardupilot_vrt.waypoints"}
     )
+
+class SamplePointRequest(BaseModel):
+    farm_id: Optional[str] = "punjab_wheat"
+    lat: float
+    lon: float
+
+class SwitchFarmRequest(BaseModel):
+    farm_id: str
+
+@app.get("/api/gee/presets")
+async def get_gee_presets():
+    return FARM_PRESETS
+
+@app.post("/api/gee/switch_farm")
+async def switch_gee_farm(req: SwitchFarmRequest):
+    farm = FARM_PRESETS.get(req.farm_id, FARM_PRESETS["punjab_wheat"])
+    current_state["drone"]["lat"] = farm["center"][0]
+    current_state["drone"]["lon"] = farm["center"][1]
+    current_state["field"]["lat"] = farm["center"][0] - 0.0005
+    current_state["field"]["lon"] = farm["center"][1] - 0.0005
+    current_state["field"]["temp_c"] = farm["air_temp_c"]
+    current_state["field"]["soil_moisture_pct"] = farm["soil_moisture_pct"]
+    current_state["vrt_stats"]["chemical_saved_pct"] = farm["chemical_saved_pct"]
+    current_state["vrt_stats"]["money_saved_inr"] = farm["money_saved_inr"]
+    await broadcast({"type": "FARM_SWITCHED", "data": farm})
+    return {"status": "ok", "active_farm": farm}
+
+@app.post("/api/gee/sample_point")
+async def sample_gee_point(req: SamplePointRequest):
+    farm = FARM_PRESETS.get(req.farm_id, FARM_PRESETS["punjab_wheat"])
+    hotspot = farm["stress_hotspot"]
+    # Compute rough distance in meters to stress hotspot
+    d_lat = (req.lat - hotspot["lat"]) * 111000.0
+    d_lon = (req.lon - hotspot["lon"]) * 95000.0
+    dist_m = (d_lat**2 + d_lon**2)**0.5
+    radius = hotspot["radius_m"]
+
+    if dist_m <= radius:
+        # Inside infection core
+        ratio = 1.0 - (dist_m / radius) * 0.5
+        ndvi = round(hotspot["ndvi"] + (1.0 - ratio) * 0.15, 3)
+        b04_red = 0.165
+        b08_nir = 0.285
+        spad = round(21.4 + (dist_m / radius) * 8.0, 1)
+        lai = round(1.2 + (dist_m / radius) * 0.8, 2)
+        vrt_pwm_pct = 100
+        health_status = f"PATHOLOGY_DETECTED: {hotspot['cause']}"
+        nozzle_status = "ACTIVE_DISCHARGE_100_PCT"
+    elif dist_m <= radius * 1.8:
+        # Buffer / Drift mitigation perimeter
+        ndvi = round(0.55 + ((dist_m - radius) / radius) * 0.2, 3)
+        b04_red = 0.082
+        b08_nir = 0.410
+        spad = 38.2
+        lai = 2.65
+        vrt_pwm_pct = 40
+        health_status = "DRIFT_BUFFER_MARGIN"
+        nozzle_status = "PROPORTIONAL_PULSE_40_PCT"
+    else:
+        # Clean healthy vegetative crop
+        ndvi = farm["reflectance"]["ndvi"]
+        b04_red = farm["reflectance"]["b04_red"]
+        b08_nir = farm["reflectance"]["b08_nir"]
+        spad = farm["chlorophyll_spad"]
+        lai = farm["lai"]
+        vrt_pwm_pct = 0
+        health_status = "HEALTHY_VIGOROUS_CANOPY"
+        nozzle_status = "VALVE_SHUT_STANDBY"
+
+    ndwi = round((farm["reflectance"]["b03_green"] - b08_nir) / (farm["reflectance"]["b03_green"] + b08_nir), 3)
+
+    return {
+        "query_coords": [req.lat, req.lon],
+        "farm_id": farm["id"],
+        "farm_name": farm["name"],
+        "crop": farm["crop"],
+        "growth_stage": farm["growth_stage"],
+        "spectral_bands": {
+            "b02_blue_490nm": farm["reflectance"]["b02_blue"],
+            "b03_green_560nm": farm["reflectance"]["b03_green"],
+            "b04_red_665nm": b04_red,
+            "b08_nir_842nm": b08_nir,
+            "b11_swir_1610nm": farm["reflectance"]["b11_swir"]
+        },
+        "indices": {
+            "ndvi": ndvi,
+            "ndwi": ndwi,
+            "spad_chlorophyll": spad,
+            "leaf_area_index": lai,
+            "fapar": farm["fapar"]
+        },
+        "pathology": {
+            "status": health_status,
+            "canopy_temp_c": farm["canopy_temp_c"] if vrt_pwm_pct == 0 else farm["canopy_temp_c"] + 2.8,
+            "temp_depression_c": farm["temp_depression_c"] if vrt_pwm_pct == 0 else "+0.4",
+            "target_disease": farm["target_disease"],
+            "prescribed_chemical": farm["chemical_name"]
+        },
+        "vrt_actuation": {
+            "nozzle_pwm_pct": vrt_pwm_pct,
+            "nozzle_state": nozzle_status,
+            "target_dose_ml_acre": farm["blanket_rate_ml_acre"] if vrt_pwm_pct == 100 else (farm["blanket_rate_ml_acre"] * 0.4 if vrt_pwm_pct == 40 else 0),
+            "solenoid_advance_lead_ms": 200
+        }
+    }
 
 # --- Biological Central Complex (CX) Navigation Endpoints ---
 active_bio_nav = BiologicalNavigationSystem()

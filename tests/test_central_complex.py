@@ -161,7 +161,7 @@ if __name__ == "__main__":
     test_angular_velocity_integration_tracking()
     test_visual_cue_phase_anchoring()
     test_fan_shaped_body_closed_loop_path_integration()
-    test_pfl4_steering_homing()
+    test_pfl3_steering_homing()
     test_mavlink_odometry_packet()
     test_gps_denied_flight_benchmark()
     print("\n==================================================================")
