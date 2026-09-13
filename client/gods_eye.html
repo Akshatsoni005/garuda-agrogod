@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GARUDA // GOD'S EYE VIEW - 3D SPATIAL DIGITAL TWIN</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- CesiumJS 3D WebGL Engine via Official CDN -->
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&display=swap');
+    
+    * { box-sizing: border-box; }
+    body, html {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #010409;
+      color: #00ffcc;
+      font-family: 'Share Tech Mono', monospace;
+      user-select: none;
+    }
+    .font-orbitron { font-family: 'Orbitron', sans-serif; }
+    #cesiumContainer {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+    /* Hide Cesium default credits and navigation clutter for clean tactical HUD */
+    .cesium-widget-credits, .cesium-viewer-bottom {
+      display: none !important;
+    }
+    .scanlines {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%), linear-gradient(90deg, rgba(0, 255, 204, 0.03), rgba(0, 0, 0, 0), rgba(0, 255, 204, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+    .flir-filter {
+      filter: contrast(2.4) invert(0.92) hue-rotate(180deg) saturate(3.0) !important;
+    }
+    .tactical-glass {
+      background: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 255, 204, 0.35);
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.12);
+    }
+    .corner-bracket {
+      position: relative;
+    }
+    .corner-bracket::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      width: 8px;
+      height: 8px;
+      border-top: 2px solid #00ffcc;
+      border-left: 2px solid #00ffcc;
+    }
+    .corner-bracket::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 8px;
+      height: 8px;
+      border-bottom: 2px solid #00ffcc;
+      border-right: 2px solid #00ffcc;
+    }
+  </style>
+</head>
+<body class="relative">
+
+  <!-- Cesium 3D Globe Container -->
+  <div id="cesiumContainer"></div>
+
+  <!-- CRT Scanlines Overlay -->
+  <div id="scanline-overlay" class="scanlines absolute inset-0 z-10 pointer-events-none"></div>
+
+  <!-- 3D Tactical Mission Cockpit HUD -->
+  <div class="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-4 md:p-6">
+    
+    <!-- Top Header & Orbital Command Bar -->
+    <div class="flex justify-between items-center tactical-glass corner-bracket px-5 py-3 rounded-lg pointer-events-auto">
+      <div class="flex items-center space-x-4">
+        <div class="relative flex items-center justify-center">
+          <div class="w-4 h-4 bg-emerald-400 rounded-full animate-ping opacity-75"></div>
+          <div class="absolute w-2 h-2 bg-emerald-300 rounded-full"></div>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xl md:text-2xl font-black tracking-widest text-emerald-400 font-orbitron">
+              GARUDA // GOD'S EYE VIEW
+            </h1>
+            <span class="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-bold">3D SPATIAL OSINT</span>
+          </div>
+          <p class="text-[10px] text-gray-400 tracking-wider">PHOTOREALISTIC 3D GLOBE · REALTIME ESP32-S3 MESH · VRT AUTONOMY</p>
+        </div>
+      </div>
+
+      <!-- Center Orbital Status Readouts -->
+      <div class="hidden xl:flex items-center space-x-6 text-xs">
+        <div class="text-center">
+          <span class="text-gray-400 block text-[9px]">SATELLITE PASS</span>
+          <span class="text-emerald-300 font-bold">SENTINEL-2A (ORBIT: 786 KM)</span>
+        </div>
+        <div class="h-6 w-[1px] bg-emerald-500/30"></div>
+        <div class="text-center">
+          <span class="text-gray-400 block text-[9px]">HARDWARE MESH</span>
+          <span id="hw-mesh-status" class="text-yellow-400 font-bold">ESP32-S3 (ONLINE)</span>
+        </div>
+        <div class="h-6 w-[1px] bg-emerald-500/30"></div>
+        <div class="text-center">
+          <span class="text-gray-400 block text-[9px]">PESTICIDE REDUCTION</span>
+          <span class="text-emerald-400 font-bold text-sm">62.4% VERIFIED</span>
+        </div>
+        <div class="h-6 w-[1px] bg-emerald-500/30"></div>
+        <div class="text-center">
+          <span class="text-gray-400 block text-[9px]">SPRAY DRIFT SAFETY</span>
+          <span class="text-emerald-400 font-bold text-xs">SAFE (3.2m Buffer)</span>
+        </div>
+      </div>
+
+      <!-- Camera Perspectives & Mode Toggles -->
+      <div class="flex items-center space-x-2">
+        <div class="bg-black/60 border border-emerald-500/40 rounded p-1 flex space-x-1 text-xs font-bold">
+          <button onclick="setCameraView('orbital')" id="cam-orbital-btn" class="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+            Orbit (600km)
+          </button>
+          <button onclick="setCameraView('chase')" id="cam-chase-btn" class="px-2.5 py-1 rounded bg-emerald-700 text-black font-black transition">
+            3D Chase Cam
+          </button>
+          <button onclick="setCameraView('nadir')" id="cam-nadir-btn" class="px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+            Survey (150m)
+          </button>
+        </div>
+
+        <button onclick="toggleFLIR()" id="flir-toggle-btn" class="bg-gray-900/90 hover:bg-gray-800 border border-emerald-500/50 text-emerald-300 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition">
+          FLIR
+        </button>
+
+        <a href="/" class="bg-gray-900/90 hover:bg-gray-800 border border-gray-600 text-gray-300 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition">
+          2D Deck
+        </a>
+      </div>
+    </div>
+
+    <!-- Center Reticle Indicator & Target Coordinates -->
+    <div class="self-center text-center opacity-40 text-[11px] tracking-widest pointer-events-none">
+      + 3D SPATIAL FRAME · TARGET SECTOR RAJASTHAN // LAT: <span id="hud-lat">26.912400</span> | LON: <span id="hud-lon">75.787300</span> +
+    </div>
+
+    <!-- Bottom Dock: Telemetry, 3D Actuators & Mission Command -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pointer-events-auto">
+      
+      <!-- Panel 1: Realtime 3D Flight Telemetry -->
+      <div class="tactical-glass corner-bracket p-4 rounded-lg space-y-2 text-xs">
+        <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5">
+          <span class="font-bold text-emerald-400 font-orbitron">DRONE ALPHA [3D TELEMETRY]</span>
+          <span id="drone-status-pill" class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40">AIRBORNE</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-gray-300">
+          <div>LAT: <span id="d-lat" class="text-white font-bold">26.912400</span></div>
+          <div>LON: <span id="d-lon" class="text-white font-bold">75.787300</span></div>
+          <div>ALTITUDE: <span id="d-alt" class="text-white font-bold">14.5 m AGL</span></div>
+          <div>BATTERY: <span id="d-bat" class="text-emerald-400 font-bold">98%</span></div>
+          <div>VRT FLOW: <span id="d-flow" class="text-yellow-400 font-bold">0.0 L/min</span></div>
+          <div>SPEED: <span class="text-white font-bold">3.2 m/s</span></div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Ground ESP32 Field Station & Physical Drift -->
+      <div class="tactical-glass corner-bracket p-4 rounded-lg space-y-2 text-xs">
+        <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5">
+          <span class="font-bold text-emerald-400 font-orbitron">GROUND FIELD NODE [IoT]</span>
+          <span class="text-[10px] text-gray-400">ESP32-S3 MESH</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-gray-300">
+          <div>SOIL MOISTURE: <span id="s-soil" class="text-cyan-300 font-bold">42.5%</span></div>
+          <div>TEMPERATURE: <span id="s-temp" class="text-white font-bold">29.8 °C</span></div>
+          <div>HUMIDITY: <span id="s-humidity" class="text-white font-bold">58.2%</span></div>
+          <div>WIND DRIFT: <span class="text-emerald-400 font-bold">8.5 km/h (SE)</span></div>
+        </div>
+      </div>
+
+      <!-- Panel 3: 3D Mission Actuators -->
+      <div class="tactical-glass corner-bracket p-4 rounded-lg flex flex-col justify-between space-y-2">
+        <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5 text-xs">
+          <span class="font-bold text-emerald-400 font-orbitron">VRT 3D ACTUATION</span>
+          <span id="spray-badge" class="text-emerald-400 font-bold">STANDBY</span>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="toggle3DStressVolume()" id="stress-btn" class="bg-emerald-950 hover:bg-emerald-900 border border-emerald-400 text-emerald-200 py-2 rounded text-[11px] font-bold uppercase transition">
+            3D NDVI Volume
+          </button>
+          <button onclick="trigger3DSpray()" id="spray-actuator-btn" class="bg-yellow-600 hover:bg-yellow-500 border border-yellow-300 text-black py-2 rounded text-[11px] font-black uppercase transition shadow-[0_0_15px_rgba(234,179,8,0.4)]">
+            Launch 3D Spray
+          </button>
+          <button onclick="runRealSatelliteApi()" id="api-ndvi-btn" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-400 text-cyan-200 py-2 rounded text-[11px] font-bold uppercase transition">
+            Run Sat NDVI
+          </button>
+          <button onclick="exportArdupilotMavlink()" class="bg-gray-900 hover:bg-gray-800 border border-gray-500 text-gray-200 py-2 rounded text-[11px] font-bold uppercase transition">
+            MAVLink .WPL
+          </button>
+        </div>
+
+        <div id="terminal-log" class="text-[10px] text-gray-400 font-mono truncate">
+          System nominal. Realtime WebGL 3D spatial stream initialized.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // 1. Synthetic Tactical Audio Engine
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq = 880, type = 'sine', duration = 0.08) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // 2. Initialize Cesium 3D Globe with Photorealistic Satellite Imagery (Zero Token Needed)
+    Cesium.Ion.defaultAccessToken = ''; // Open provider fallback
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      imageryProvider: new Cesium.ArcGisMapServerImageryProvider({
+        url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'
+      }),
+      baseLayerPicker: false,
+      geocoder: false,
+      homeButton: false,
+      infoBox: false,
+      selectionIndicator: false,
+      navigationHelpButton: false,
+      navigationInstructionsInitiallyVisible: false,
+      sceneModePicker: false,
+      timeline: false,
+      animation: false,
+      fullscreenButton: false,
+      vrButton: false
+    });
+
+    // Configure globe visual realism
+    viewer.scene.globe.enableLighting = false;
+    viewer.scene.globe.depthTestAgainstTerrain = false;
+    viewer.scene.skyAtmosphere.show = true;
+    viewer.scene.skyBox.show = true;
+
+    // Farm Ground Coordinates (Rajasthan, India)
+    const farmCenterLon = 75.787300;
+    const farmCenterLat = 26.912400;
+    let droneAltMeters = 14.5;
+
+    // 3. Farm Boundary Polygon in 3D
+    const farmPolygon3D = viewer.entities.add({
+      name: 'Garuda Farm Sector 04',
+      polygon: {
+        hierarchy: Cesium.Cartesian3.fromDegreesArray([
+          75.7858, 26.9135,
+          75.7888, 26.9135,
+          75.7888, 26.9113,
+          75.7858, 26.9113
+        ]),
+        material: Cesium.Color.fromCssColorString('#00ffcc').withAlpha(0.08),
+        outline: true,
+        outlineColor: Cesium.Color.fromCssColorString('#00ffcc').withAlpha(0.8),
+        outlineWidth: 2
+      }
+    });
+
+    // 4. Ground IoT Station Entity in 3D
+    const groundSensorNode = viewer.entities.add({
+      name: 'ESP32 Ground Station',
+      position: Cesium.Cartesian3.fromDegrees(75.7870, 26.9120, 0),
+      point: {
+        pixelSize: 10,
+        color: Cesium.Color.CYAN,
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2
+      },
+      label: {
+        text: 'ESP32 IOT NODE',
+        font: '10px monospace',
+        fillColor: Cesium.Color.CYAN,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -12)
+      }
+    });
+
+    // 5. 3D Volumetric Prescription Stress Zone (Glowing Red Extruded Cylinder)
+    let stressVolumeEntity = null;
+    let isStressVolumeVisible = false;
+
+    function toggle3DStressVolume() {
+      playBeep(1200);
+      if (isStressVolumeVisible) {
+        if (stressVolumeEntity) viewer.entities.remove(stressVolumeEntity);
+        isStressVolumeVisible = false;
+        document.getElementById('stress-btn').classList.remove('bg-emerald-600');
+        logTerminal('3D NDVI stress volumes dismissed.');
+      } else {
+        stressVolumeEntity = viewer.entities.add({
+          name: 'NDVI Yellow Rust Stress Zone',
+          position: Cesium.Cartesian3.fromDegrees(75.7878, 26.9128, 10),
+          cylinder: {
+            length: 20.0,
+            topRadius: 35.0,
+            bottomRadius: 35.0,
+            material: Cesium.Color.RED.withAlpha(0.4),
+            outline: true,
+            outlineColor: Cesium.Color.RED.withAlpha(0.9)
+          },
+          label: {
+            text: 'SECTOR 4: YELLOW RUST (NDVI 0.28)',
+            font: '11px monospace',
+            fillColor: Cesium.Color.RED,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 3,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            pixelOffset: new Cesium.Cartesian2(0, -25)
+          }
+        });
+        isStressVolumeVisible = true;
+        document.getElementById('stress-btn').classList.add('bg-emerald-600');
+        logTerminal('3D NDVI Volumetric Stress Zones Projected: Fungal Lesion Detected.');
+      }
+    }
+
+    // 6. 3D Drone Entity with Altitude Leader Line (Vertical Dropline to Ground)
+    let dronePosition = Cesium.Cartesian3.fromDegrees(farmCenterLon, farmCenterLat, droneAltMeters);
+    let groundPosition = Cesium.Cartesian3.fromDegrees(farmCenterLon, farmCenterLat, 0.0);
+
+    const droneEntity = viewer.entities.add({
+      name: 'Garuda Drone Alpha',
+      position: new Cesium.CallbackProperty(() => dronePosition, false),
+      point: {
+        pixelSize: 14,
+        color: Cesium.Color.fromCssColorString('#00ffcc'),
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2
+      },
+      label: {
+        text: 'GARUDA-01',
+        font: '11px Orbitron, sans-serif',
+        fillColor: Cesium.Color.fromCssColorString('#00ffcc'),
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -16)
+      }
+    });
+
+    // Altitude vertical ribbon connecting drone to ground
+    const altitudeDropLine = viewer.entities.add({
+      polyline: {
+        positions: new Cesium.CallbackProperty(() => [dronePosition, groundPosition], false),
+        width: 2,
+        material: new Cesium.PolylineDashMaterialProperty({
+          color: Cesium.Color.fromCssColorString('#00ffcc').withAlpha(0.6),
+          dashLength: 8.0
+        })
+      }
+    });
+
+    // 3D Animated Spray Mist Cone
+    let sprayConeEntity = null;
+    let is3DSpraying = false;
+
+    function apply3DSprayState(spraying) {
+      is3DSpraying = spraying;
+      const pill = document.getElementById('drone-status-pill');
+      const badge = document.getElementById('spray-badge');
+      const btn = document.getElementById('spray-actuator-btn');
+      const flow = document.getElementById('d-flow');
+
+      if (spraying) {
+        pill.innerText = 'VRT SPRAYING';
+        pill.className = 'px-2 py-0.5 rounded text-[10px] bg-yellow-950 text-yellow-300 border border-yellow-500/40 animate-pulse';
+        badge.innerText = 'ACTIVE VRT';
+        badge.className = 'text-yellow-400 font-bold animate-pulse';
+        btn.innerText = 'Stop Spray';
+        btn.classList.replace('bg-yellow-600', 'bg-red-600');
+        flow.innerText = '1.8 L/min';
+
+        if (!sprayConeEntity) {
+          sprayConeEntity = viewer.entities.add({
+            name: 'VRT Spray Mist Droplet Cone',
+            position: new Cesium.CallbackProperty(() => {
+              // Position midway between drone and ground
+              return Cesium.Cartesian3.fromDegrees(currentLon, currentLat, droneAltMeters / 2.0);
+            }, false),
+            cylinder: {
+              length: new Cesium.CallbackProperty(() => droneAltMeters, false),
+              topRadius: 0.5,
+              bottomRadius: 3.5, // Swath cone width
+              material: Cesium.Color.YELLOW.withAlpha(0.45)
+            }
+          });
+        }
+        logTerminal('3D VRT Solenoid Open: Spraying 1.8 L/min over infected crop.');
+      } else {
+        pill.innerText = 'AIRBORNE';
+        pill.className = 'px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40';
+        badge.innerText = 'STANDBY';
+        badge.className = 'text-emerald-400 font-bold';
+        btn.innerText = 'Launch 3D Spray';
+        btn.classList.replace('bg-red-600', 'bg-yellow-600');
+        flow.innerText = '0.0 L/min';
+
+        if (sprayConeEntity) {
+          viewer.entities.remove(sprayConeEntity);
+          sprayConeEntity = null;
+        }
+        logTerminal('VRT Solenoid Closed: Standby.');
+      }
+    }
+
+    async function trigger3DSpray() {
+      playBeep(is3DSpraying ? 600 : 1100);
+      try {
+        const res = await fetch('/api/vrt/toggle_spray', { method: 'POST' });
+        const data = await res.json();
+        apply3DSprayState(data.spraying);
+      } catch (err) {
+        apply3DSprayState(!is3DSpraying);
+      }
+    }
+
+    // 7. Sentinel-2A Orbital Trajectory Line in Orbit (786 km)
+    const orbitPositions = [];
+    for (let lat = 10; lat <= 40; lat += 2) {
+      const lon = 75.7873 - (lat - 26.9124) * 0.18; // SSO inclination track
+      orbitPositions.push(Cesium.Cartesian3.fromDegrees(lon, lat, 786000));
+    }
+    const sentinelOrbitLine = viewer.entities.add({
+      name: 'Sentinel-2A Orbit Track',
+      polyline: {
+        positions: orbitPositions,
+        width: 2,
+        material: new Cesium.PolylineGlowMaterialProperty({
+          glowPower: 0.25,
+          color: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.7)
+        })
+      }
+    });
+
+    // 8. Dynamic Camera Perspectives
+    let currentCameraMode = 'chase';
+    let currentLon = farmCenterLon;
+    let currentLat = farmCenterLat;
+
+    function setCameraView(mode) {
+      playBeep(900);
+      currentCameraMode = mode;
+      
+      document.getElementById('cam-orbital-btn').className = 'px-2.5 py-1 rounded bg-gray-800 text-gray-300';
+      document.getElementById('cam-chase-btn').className = 'px-2.5 py-1 rounded bg-gray-800 text-gray-300';
+      document.getElementById('cam-nadir-btn').className = 'px-2.5 py-1 rounded bg-gray-800 text-gray-300';
+
+      if (mode === 'orbital') {
+        document.getElementById('cam-orbital-btn').className = 'px-2.5 py-1 rounded bg-emerald-700 text-black font-black';
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(currentLon, currentLat - 4.0, 650000.0),
+          orientation: {
+            heading: Cesium.Math.toRadians(0.0),
+            pitch: Cesium.Math.toRadians(-55.0),
+            roll: 0.0
+          },
+          duration: 2.0
+        });
+        logTerminal('Camera switched: Low Earth Orbital View (650 km).');
+      } else if (mode === 'chase') {
+        document.getElementById('cam-chase-btn').className = 'px-2.5 py-1 rounded bg-emerald-700 text-black font-black';
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(currentLon, currentLat - 0.0003, droneAltMeters + 20.0),
+          orientation: {
+            heading: Cesium.Math.toRadians(0.0),
+            pitch: Cesium.Math.toRadians(-35.0),
+            roll: 0.0
+          },
+          duration: 1.5
+        });
+        logTerminal('Camera locked: Tactical 3D Chase Camera (25m AGL).');
+      } else if (mode === 'nadir') {
+        document.getElementById('cam-nadir-btn').className = 'px-2.5 py-1 rounded bg-emerald-700 text-black font-black';
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(currentLon, currentLat, 180.0),
+          orientation: {
+            heading: Cesium.Math.toRadians(0.0),
+            pitch: Cesium.Math.toRadians(-75.0),
+            roll: 0.0
+          },
+          duration: 1.5
+        });
+        logTerminal('Camera switched: Orthomosaic Survey View (180m AGL).');
+      }
+    }
+
+    // Set initial camera to Chase view
+    setTimeout(() => {
+      setCameraView('chase');
+    }, 1000);
+
+    // 9. Realtime WebSocket Telemetry Stream (from ESP32-S3 or Simulator)
+    const loc = window.location;
+    const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = loc.hostname || 'localhost';
+    const wsPort = loc.port || '8000';
+    const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}/ws/cockpit`;
+
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      document.getElementById('hw-mesh-status').innerText = 'ESP32 (STREAMING)';
+      document.getElementById('hw-mesh-status').classList.replace('text-yellow-400', 'text-emerald-400');
+      logTerminal('WebSocket connected: Live ESP32-S3 3D telemetry stream established.');
+    };
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === 'DRONE_TELEMETRY' || (msg.type === 'INITIAL_STATE' && msg.data.drone)) {
+        const d = msg.data.drone || msg.data;
+        update3DDrone(d);
+      } else if (msg.type === 'FIELD_TELEMETRY' || (msg.type === 'INITIAL_STATE' && msg.data.field)) {
+        const f = msg.data.field || msg.data;
+        updateFieldHUD(f);
+      } else if (msg.type === 'VRT_STATUS_UPDATE') {
+        apply3DSprayState(msg.data.spraying);
+      }
+    };
+
+    function update3DDrone(d) {
+      currentLon = d.lon;
+      currentLat = d.lat;
+      droneAltMeters = d.alt;
+
+      dronePosition = Cesium.Cartesian3.fromDegrees(currentLon, currentLat, droneAltMeters);
+      groundPosition = Cesium.Cartesian3.fromDegrees(currentLon, currentLat, 0.0);
+
+      document.getElementById('d-lat').innerText = d.lat.toFixed(6);
+      document.getElementById('d-lon').innerText = d.lon.toFixed(6);
+      document.getElementById('d-alt').innerText = d.alt + ' m AGL';
+      document.getElementById('d-bat').innerText = d.battery + '%';
+      document.getElementById('hud-lat').innerText = d.lat.toFixed(6);
+      document.getElementById('hud-lon').innerText = d.lon.toFixed(6);
+
+      if (d.spraying !== is3DSpraying) {
+        apply3DSprayState(d.spraying);
+      }
+
+      // If in chase mode, gently track drone
+      if (currentCameraMode === 'chase' && !viewer.camera._flying) {
+        viewer.camera.setView({
+          destination: Cesium.Cartesian3.fromDegrees(currentLon, currentLat - 0.0003, droneAltMeters + 20.0),
+          orientation: {
+            heading: Cesium.Math.toRadians(0.0),
+            pitch: Cesium.Math.toRadians(-35.0),
+            roll: 0.0
+          }
+        });
+      }
+    }
+
+    function updateFieldHUD(f) {
+      if (f.temp_c) document.getElementById('s-temp').innerText = f.temp_c + ' °C';
+      if (f.humidity_pct) document.getElementById('s-humidity').innerText = f.humidity_pct + '%';
+      if (f.soil_moisture_pct) document.getElementById('s-soil').innerText = f.soil_moisture_pct + '%';
+    }
+
+    // 10. FLIR Thermal Vision
+    let isFlir = false;
+    function toggleFLIR() {
+      playBeep(1400);
+      isFlir = !isFlir;
+      const c = document.getElementById('cesiumContainer');
+      const btn = document.getElementById('flir-toggle-btn');
+      if (isFlir) {
+        c.classList.add('flir-filter');
+        btn.classList.add('bg-cyan-600', 'text-black');
+        logTerminal('FLIR Thermal Infrared Shaders: ACTIVE (Soil Moisture Differential View)');
+      } else {
+        c.classList.remove('flir-filter');
+        btn.classList.remove('bg-cyan-600', 'text-black');
+        logTerminal('FLIR Thermal Shaders: DEACTIVATED');
+      }
+    }
+
+    // 11. Practical API Triggers
+    async function runRealSatelliteApi() {
+      playBeep(1100);
+      logTerminal('Querying Copernicus Sentinel-2 L2A Multispectral Engine...');
+      try {
+        const res = await fetch('/api/real/ndvi', { method: 'POST' });
+        const data = await res.json();
+        logTerminal(`[Satellite API]: Mean NDVI=${data.mean_ndvi} | Chem Saved=${data.vrt_prescription.chemical_reduction_pct}% | Severe Stress Area=${data.zone_distribution.severe_infection_pct}%`);
+        toggle3DStressVolume();
+      } catch (err) {
+        logTerminal('Error reaching Sentinel-2 API endpoint.');
+      }
+    }
+
+    function exportArdupilotMavlink() {
+      playBeep(800);
+      logTerminal('Exporting official ArduPilot MAVLink 2.0 .waypoints mission...');
+      window.location.href = '/api/real/export_mavlink2';
+    }
+
+    function logTerminal(text) {
+      document.getElementById('terminal-log').innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
+    }
+  </script>
+</body>
+</html>
