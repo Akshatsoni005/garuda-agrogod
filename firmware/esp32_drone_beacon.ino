@@ -10,16 +10,16 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-// Wi-Fi Credentials (set to mobile hotspot for hackathon live demo)
-const char* WIFI_SSID = "Garuda_MobileHotspot";
-const char* WIFI_PASS = "GarudaPass2026";
+// Wi-Fi Credentials (configure for your phone hotspot or local router)
+const char* WIFI_SSID = "YOUR_WIFI_SSID";
+const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
 
 // Server Endpoint (IP of laptop running AgroGod backend)
-const char* TELEMETRY_URL = "http://192.168.1.100:8000/api/telemetry/drone";
+const char* TELEMETRY_URL = "http://YOUR_SERVER_IP:8000/api/telemetry/drone";
 
-// Starting coordinates (example farm in Rajasthan/Punjab, India)
-float drone_lat = 26.912400;
-float drone_lon = 75.787300;
+// Starting coordinates (Punjab Wheat Belt, India)
+float drone_lat = 30.852500;
+float drone_lon = 75.865000;
 float drone_alt = 12.5; // meters
 int battery_pct = 99;
 bool vrt_spraying_active = false;

@@ -26,10 +26,10 @@
 #define NUM_WEDGES 16
 #define TWO_PI_CONST 6.28318530717958647692f
 
-// Wi-Fi Credentials for telemetry uplink
-const char* WIFI_SSID = "Garuda_MobileHotspot";
-const char* WIFI_PASS = "GarudaPass2026";
-const char* BIO_NAV_URL = "http://192.168.1.100:8000/api/bio-nav/step";
+// Wi-Fi Credentials for telemetry uplink (configure for your local router / hotspot)
+const char* WIFI_SSID = "YOUR_WIFI_SSID";
+const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
+const char* BIO_NAV_URL = "http://YOUR_SERVER_IP:8000/api/bio-nav/step";
 
 // Neural Attractor State
 float eb_thetas[NUM_WEDGES];

@@ -10,12 +10,13 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-const char* WIFI_SSID = "Garuda_MobileHotspot";
-const char* WIFI_PASS = "GarudaPass2026";
-const char* TELEMETRY_URL = "http://192.168.1.100:8000/api/telemetry/field";
+// Wi-Fi Credentials (configure for your phone hotspot or local router)
+const char* WIFI_SSID = "YOUR_WIFI_SSID";
+const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
+const char* TELEMETRY_URL = "http://YOUR_SERVER_IP:8000/api/telemetry/field";
 
-float field_lat = 26.912000;
-float field_lon = 75.787000;
+float field_lat = 30.852000;
+float field_lon = 75.864500;
 float soil_moisture_pct = 42.5;
 float ambient_temp_c = 29.8;
 float ambient_humidity_pct = 58.2;
