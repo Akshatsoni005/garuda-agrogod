@@ -16,8 +16,7 @@ import os
 import sys
 
 # Add parent directory for module imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from ml.diagnose import evaluate_crop_health, calculate_ndvi
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from ml.real_satellite_ndvi import compute_real_ndvi_raster, generate_vrt_prescription_zones, create_synthetic_field_reflectance
 from ml.real_crop_cv import detect_foliar_pathology_and_triggers, create_synthetic_crop_image
 from ml.central_complex import BiologicalNavigationSystem, run_gps_denied_flight_benchmark

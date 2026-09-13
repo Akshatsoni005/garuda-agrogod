@@ -152,25 +152,21 @@ def generate_vrt_flight_mission(
 
 def export_mavlink_wpl110(waypoints: List[Dict[str, Any]]) -> str:
     """Generates standard QGroundControl / Mission Planner MAVLink WPL 110 format string.
-    Can be directly saved as .waypoints and loaded into any ArduPilot or PX4 drone.
+    Strict sequential integer indexing (0, 1, 2, ...) compatible with all GCS parsers.
     """
     lines = ["QGC WPL 110"]
-    # Row format: <INDEX> <CURRENT_WP> <COORD_FRAME> <COMMAND> <PARAM1> <PARAM2> <PARAM3> <PARAM4> <LAT> <LON> <ALT> <AUTOCONTINUE>
-    # MAV_CMD_NAV_WAYPOINT = 16
-    for i, wp in enumerate(waypoints):
-        current_wp = 1 if i == 0 else 0
-        cmd = 16 # MAV_CMD_NAV_WAYPOINT
-        param1 = 0 # Hold time (s)
-        param2 = 2 # Acceptance radius (m)
-        param3 = 0 # Pass radius (m)
-        param4 = 0 # Yaw orientation
-        autocontinue = 1
-        line = f"{i}\t{current_wp}\t3\t{cmd}\t{param1:.6f}\t{param2:.6f}\t{param3:.6f}\t{param4:.6f}\t{wp['lat']:.6f}\t{wp['lon']:.6f}\t{wp['alt']:.6f}\t{autocontinue}"
+    seq = 0
+    for wp in waypoints:
+        current_wp = 1 if seq == 0 else 0
+        cmd = 16  # MAV_CMD_NAV_WAYPOINT
+        line = f"{seq}\t{current_wp}\t3\t{cmd}\t0.000000\t2.000000\t0.000000\t0.000000\t{wp['lat']:.7f}\t{wp['lon']:.7f}\t{wp.get('alt', 12.0):.2f}\t1"
         lines.append(line)
+        seq += 1
         
-        # If spraying state changes, inject DO_SET_SERVO command (MAV_CMD_DO_SET_SERVO = 183) for spray nozzle relay
-        if wp["spraying"]:
-            lines.append(f"{i+1}_spray\t0\t3\t183\t9.000000\t2000.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t1")
+        if wp.get("spraying", False):
+            # MAV_CMD_DO_SET_SERVO = 183 on Channel 9
+            lines.append(f"{seq}\t0\t3\t183\t9.000000\t2000.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t1")
+            seq += 1
 
     return "\n".join(lines)
 
