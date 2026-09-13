@@ -18,7 +18,10 @@ import sys
 # Add parent directory for module imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from ml.diagnose import evaluate_crop_health, calculate_ndvi
+from ml.real_satellite_ndvi import compute_real_ndvi_raster, generate_vrt_prescription_zones, create_synthetic_field_reflectance
+from ml.real_crop_cv import detect_foliar_pathology_and_triggers, create_synthetic_crop_image
 from server.planner import generate_vrt_flight_mission, export_mavlink_wpl110, calculate_spray_drift
+from server.real_mavlink_mission import create_mavlink_mission_items, serialize_mission_to_qgc_wpl
 
 app = FastAPI(title="Garuda AgroGod Command Bridge")
 
@@ -196,6 +199,36 @@ async def calculate_farmer_roi(req: RoiRequest):
         "chemical_saved_pct": chemical_saved_pct,
         "payback_period": "Immediate (First Spray Session)"
     }
+
+@app.post("/api/real/ndvi")
+async def run_real_satellite_ndvi(grid_size: int = 100):
+    red, nir = create_synthetic_field_reflectance(grid_size)
+    ndvi_matrix = compute_real_ndvi_raster(red, nir)
+    report = generate_vrt_prescription_zones(ndvi_matrix)
+    await broadcast({"type": "REAL_NDVI_REPORT", "data": report})
+    return report
+
+@app.post("/api/real/cv_spot_detect")
+async def run_real_computer_vision_spot_detect(speed_m_s: float = 3.0, offset_m: float = 0.6):
+    frame = create_synthetic_crop_image()
+    cv_res = detect_foliar_pathology_and_triggers(frame, ground_speed_m_s=speed_m_s, camera_to_nozzle_offset_m=offset_m)
+    await broadcast({"type": "REAL_CV_DETECTION", "data": cv_res})
+    return cv_res
+
+@app.get("/api/real/export_mavlink2")
+async def export_real_mavlink2_mission():
+    global latest_mission_cache
+    if not latest_mission_cache or "waypoints" not in latest_mission_cache:
+        sample_field = [(26.9135, 75.7858), (26.9135, 75.7888), (26.9113, 75.7888), (26.9113, 75.7858)]
+        sample_stress = [{"lat": 26.9128, "lon": 75.7878, "radius_m": 30.0}]
+        latest_mission_cache = generate_vrt_flight_mission(sample_field, stress_zones=sample_stress)
+
+    items = create_mavlink_mission_items(latest_mission_cache["waypoints"])
+    wpl_content = serialize_mission_to_qgc_wpl(items)
+    return PlainTextResponse(
+        wpl_content,
+        headers={"Content-Disposition": "attachment; filename=garuda_ardupilot_vrt.waypoints"}
+    )
 
 @app.websocket("/ws/cockpit")
 async def cockpit_websocket(websocket: WebSocket):

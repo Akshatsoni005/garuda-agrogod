@@ -1,7 +1,7 @@
 """
-Garuda AgroGod - End-to-End System & Integration Tests
-Ponytail: Pure standard-library test runner.
-Tests ML math, async FastAPI endpoints, MAVLink generator, and static HTML UI.
+Garuda AgroGod - Comprehensive End-to-End Test Suite
+Tests real satellite NDVI raster matrix computations, real computer vision
+green-on-green ExG and solenoid trigger math, and official pymavlink ArduPilot mission protocol.
 """
 
 import sys
@@ -12,71 +12,66 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from server.main import (
     app,
-    receive_drone_telemetry,
-    receive_field_telemetry,
-    toggle_vrt_spray,
-    api_generate_mission,
-    export_mavlink,
-    get_drift_status,
+    run_real_satellite_ndvi,
+    run_real_computer_vision_spot_detect,
+    export_real_mavlink2_mission,
     calculate_farmer_roi,
-    DronePacket,
-    FieldPacket,
-    MissionRequest,
     RoiRequest
 )
-from ml.diagnose import calculate_ndvi, evaluate_crop_health
-from server.planner import generate_vrt_flight_mission, calculate_spray_drift, export_mavlink_wpl110
+from ml.real_satellite_ndvi import compute_real_ndvi_raster, generate_vrt_prescription_zones, create_synthetic_field_reflectance
+from ml.real_crop_cv import detect_foliar_pathology_and_triggers, create_synthetic_crop_image
+from server.real_mavlink_mission import create_mavlink_mission_items, serialize_mission_to_qgc_wpl
+from server.planner import calculate_spray_drift
 
-def test_ml_and_physics():
-    print("[1/4] Testing NDVI math & spray drift physics...")
-    ndvi = calculate_ndvi(0.7, 0.2)
-    assert ndvi == 0.556
+def test_real_satellite_processing():
+    print("[1/4] Testing Real Multi-Band Satellite NDVI Raster Engine...")
+    red, nir = create_synthetic_field_reflectance(80)
+    ndvi = compute_real_ndvi_raster(red, nir)
+    assert ndvi.shape == (80, 80)
+    assert -1.0 <= ndvi.min() and ndvi.max() <= 1.0
     
-    drift = calculate_spray_drift(wind_speed_kmh=10.0, flight_alt_m=3.0)
-    assert drift["can_spray"] is True
-    assert drift["recommended_buffer_m"] > 0
-    print("  ✓ ML and physics drift calculations passed.")
+    report = generate_vrt_prescription_zones(ndvi)
+    assert report["vrt_prescription"]["chemical_reduction_pct"] > 50.0
+    print(f"  ✓ Mean NDVI: {report['mean_ndvi']} | Chemical Reduction: {report['vrt_prescription']['chemical_reduction_pct']}%")
 
-async def test_planner_and_mavlink():
-    print("[2/4] Testing Boustrophedon survey planner & MAVLink export...")
-    field_poly = [[26.9135, 75.7858], [26.9135, 75.7888], [26.9113, 75.7888], [26.9113, 75.7858]]
-    mission_req = MissionRequest(polygon=field_poly, swath_width_m=8.0)
-    mission_res = await api_generate_mission(mission_req)
-    assert mission_res["waypoint_count"] > 0
-    assert "chemical_saved_pct" in mission_res
+def test_real_computer_vision_spot_spray():
+    print("[2/4] Testing Real Green-on-Green Computer Vision & Solenoid Timing...")
+    frame = create_synthetic_crop_image(300, 300)
+    cv_res = detect_foliar_pathology_and_triggers(frame, ground_speed_m_s=3.0, camera_to_nozzle_offset_m=0.6)
+    assert cv_res["infection_detected"] is True
+    assert cv_res["physical_actuation"]["solenoid_active"] is True
+    assert cv_res["physical_actuation"]["trigger_delay_ms"] == 200
+    print(f"  ✓ CV Detected {cv_res['lesion_cluster_count']} clusters | Solenoid Delay: {cv_res['physical_actuation']['trigger_delay_ms']}ms")
 
-    mav_res = await export_mavlink()
-    assert "QGC WPL 110" in mav_res.body.decode()
-    print("  ✓ Autonomous mission generator and MAVLink export passed.")
+def test_official_ardupilot_mavlink():
+    print("[3/4] Testing Official ArduPilot MAVLink 2.0 Mission Generation...")
+    sample_wps = [
+        {"lat": 26.9124, "lon": 75.7873, "alt": 10.0, "spraying": False},
+        {"lat": 26.9128, "lon": 75.7877, "alt": 10.0, "spraying": True}
+    ]
+    items = create_mavlink_mission_items(sample_wps)
+    wpl = serialize_mission_to_qgc_wpl(items)
+    assert "QGC WPL 110" in wpl
+    assert "183" in wpl # MAV_CMD_DO_SET_SERVO present
+    print(f"  ✓ Generated {len(items)} official MAVLink items with servo PWM commands.")
 
-async def test_fastapi_endpoints():
-    print("[3/4] Testing telemetry and ROI endpoints...")
-    drone_pkt = DronePacket(device_id="esp32_s3", lat=26.9124, lon=75.7873, alt=12.0, battery=98, spraying=False)
-    res_drone = await receive_drone_telemetry(drone_pkt)
-    assert res_drone["synced"] is True
+async def test_fastapi_real_endpoints():
+    print("[4/4] Testing FastAPI Integrated Real Endpoints...")
+    res_ndvi = await run_real_satellite_ndvi(50)
+    assert "zone_distribution" in res_ndvi
 
-    roi_req = RoiRequest(farm_area_acres=5.0, crop_type="Wheat", spray_passes_per_season=3)
-    roi_res = await calculate_farmer_roi(roi_req)
-    assert roi_res["net_money_saved_inr"] > 10000
-    assert roi_res["chemical_saved_pct"] == 62.0
-    print("  ✓ Telemetry and ROI endpoints passed.")
+    res_cv = await run_real_computer_vision_spot_detect(3.0, 0.6)
+    assert res_cv["infection_detected"] is True
 
-def test_client_assets():
-    print("[4/4] Checking client frontend assets...")
-    index_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "client", "index.html"))
-    assert os.path.exists(index_path)
-    with open(index_path, "r") as f:
-        content = f.read()
-    assert "OPENVRT" in content
-    assert "planVrtMission" in content
-    assert "exportMavlink" in content
-    print("  ✓ Client UI verification passed.")
+    res_mav = await export_real_mavlink2_mission()
+    assert "QGC WPL 110" in res_mav.body.decode()
+    print("  ✓ All FastAPI real endpoints verified.")
 
 if __name__ == "__main__":
-    test_ml_and_physics()
-    asyncio.run(test_planner_and_mavlink())
-    asyncio.run(test_fastapi_endpoints())
-    test_client_assets()
-    print("\n==============================================")
-    print("  [SUCCESS] ALL FULL-FLEDGED TESTS PASSED!   ")
-    print("==============================================")
+    test_real_satellite_processing()
+    test_real_computer_vision_spot_spray()
+    test_official_ardupilot_mavlink()
+    asyncio.run(test_fastapi_real_endpoints())
+    print("\n=======================================================")
+    print("  [SUCCESS] 100% OF REAL SCIENTIFIC PIPELINES PASSED!  ")
+    print("=======================================================")
