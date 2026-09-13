@@ -25,11 +25,22 @@ Today, over **92% of Indian farmers** rely on manual knapsack or tractor-mounted
 
 ---
 
-## 2. Core Scientific Innovations
+## 2. Scientific Architecture & Data Provenance
+
+### Data Source & Authenticity Taxonomy
+To maintain rigorous scientific and engineering integrity, all outputs in Garuda AgroGod are explicitly labeled by data provenance:
+
+| Badge / Label | Meaning & Technical Scope in Garuda Stack |
+| :--- | :--- |
+| `CALCULATED` | Real mathematical algorithms (e.g. NumPy NDVI raster matrix calculation, OpenCV ExG segmentation) running on calibrated spectral/image data. |
+| `SIMULATED` | Algorithmic simulation engine output (e.g. 60s GPS-denied Drosophila CX drift benchmark, ESP32 flight orbit generator, random-walk microclimate drift). |
+| `MODELLED` | Agronomic / physics model output (e.g. 87.5% VRT spray volume model, empirical downwind spray drift buffer). Biological field trial verification pending. |
+| `ESTIMATED` | Sub-pixel and spatial proximity extrapolation (e.g. chlorophyll SPAD index derived from stress center distance). |
+| `LIVE` | Reserved for verified physical hardware telemetry (ADC battery voltage, physical GPS NMEA UART, real Pixhawk MAVLink stream). |
 
 ### A. Hierarchical Tiered Remote Sensing (Satellite to UAV Funnel)
 Spaceborne sensors suffer from fundamental sub-pixel dilution ($10\text{m} \times 10\text{m}$ pixel = $1,000,000\text{ cm}^2$ vs $900\text{ cm}^2$ weed patch = $0.09\%$ signal fraction). Garuda bridges the gap:
-1. **Satellite Spaceborne Layer**: Ingests Sentinel-2 Bottom-of-Atmosphere (BOA) surface reflectance (B04 Red $665\text{nm}$, B08 NIR $842\text{nm}$, B11 SWIR $1610\text{nm}$) to identify stress gradients.
+1. **Satellite Spaceborne Layer**: Ingests Sentinel-2 Bottom-of-Atmosphere (BOA) surface reflectance (B04 Red $665\text{nm}$, B08 NIR $842\text{nm}$, B11 SWIR $1610\text{nm}$) to delineate macro-management zones.
 2. **UAV High-Speed Orthomosaic**: Autonomous boustrophedon sweep generating centimeter-level target coordinates.
 3. **Targeted Micro-Solenoid Discharge**: 12V pulse-width modulated (PWM) solenoids atomizing Ultra-Low Volume (ULV) droplet cones ($250\mu\text{m}$ VMD) directly into the rotor downwash.
 
@@ -40,9 +51,11 @@ Standard drones suffer compass failure ("toilet-bowling") caused by high-current
   - **Protocerebral Bridge (PB)**: P-EN shifter circuits integrating angular velocity from rate gyroscopes.
   - **Fan-Shaped Body (FB)**: Phasor path integrator maintaining an egocentric home vector.
   - **PFL3 Steering**: Direct homing steering torque outputted as MAVLink `#331 ODOMETRY` packets.
-- **Benchmark**: Reduces heading drift error by **96.7%** under severe magnetic distortion.
+- **Simulation Benchmark**: Achieves **96.7% Simulated Drift Error Reduction** under 45°/min magnetic drift and gyro bias ($1.54\text{ m}$ biological drift vs. $46.33\text{ m}$ naive dead reckoning). Field benchmarks pending on flight hardware.
 
-### C. Anticipatory Millisecond Solenoid Timing
+### C. Foliar Candidate Detection & Physical Timing Math
+- **Candidate Detector**: Uses Excess Green ($ExG = 2G - R - B$) canopy segmentation and HSV hue-band filtering to isolate yellow-lesion candidates on living vegetation. (Requires UAV ground confirmation to distinguish rust pustules from senescence or nutrient chlorosis).
+- **Solenoid Timing Budget**:
 $$\Delta t_{\text{total}} = t_{\text{exposure}} (20\text{ms}) + t_{\text{inference}} (35\text{ms}) + t_{\text{serial}} (5\text{ms}) + t_{\text{valve}} (20\text{ms}) = \mathbf{80\text{ ms}}$$
 $$\Delta x_{\text{lead}} = v_{\text{ground}} \times \Delta t_{\text{total}} = 3.0\text{ m/s} \times 0.080\text{ s} = \mathbf{24\text{ cm}}$$
 The flight stack advances the solenoid trigger by $24\text{ cm}$ in flight, eliminating ground-speed droplet smearing.
@@ -116,14 +129,14 @@ python tests/test_central_complex.py
 
 ---
 
-## 5. Verified Farmer Unit Economics (Punjab & Haryana 5-Acre Model)
+## 5. Modelled Farmer Unit Economics (Punjab & Haryana 5-Acre Model)
 
-| Parameter | Traditional Knapsack / Tractor | Garuda AgroGod (VRT) | Verified Impact |
+| Parameter | Traditional Knapsack / Tractor | Garuda AgroGod (VRT) | Data Status / Provenance |
 | :--- | :--- | :--- | :--- |
-| **Active Chemical Applied** | $1,000\text{ ml}$ (Broadcast over 5 acres) | $125\text{ ml}$ (Targeted $0.625\text{ acre}$ hotspot) | **87.5% Chemical Eliminated** |
-| **Water Carrier Volume** | $1,000\text{ Liters}$ | $12.5\text{ Liters}$ (ULV atomization) | **98.7% Water Saved** |
-| **Seasonal Cost (3 Passes)** | ₹36,000 | ₹20,430 (Drone FaaS booking fee included) | **₹15,570 Net Cash Saved (43.2%)** |
-| **GPS-Denied Heading Drift** | $46.33\text{ m}$ (Naive DR under motor glitch) | **$1.54\text{ m}$** (Drosophila CX CANN) | **96.7% Drift Error Reduction** |
+| **Active Chemical Applied** | $1,000\text{ ml}$ (Broadcast over 5 acres) | $125\text{ ml}$ (Targeted $0.625\text{ acre}$ hotspot) | **`MODELLED` 87.5% Volume Reduction** (geometric VRT prescription; biological efficacy subject to agronomic trials) |
+| **Water Carrier Volume** | $1,000\text{ Liters}$ | $12.5\text{ Liters}$ (ULV atomization) | **`MODELLED` 98.7% Water Saved** (ULV 250µm mist vs hydraulic knapsack) |
+| **Seasonal Cost (3 Passes)** | ₹36,000 | ₹20,430 (Drone FaaS booking fee included) | **`MODELLED` ₹15,570 Net Cash Saved (43.2%)** (ICAR 2023-24 input cost baseline) |
+| **GPS-Denied Heading Drift** | $46.33\text{ m}$ (Naive DR under motor glitch) | **$1.54\text{ m}$** (Drosophila CX CANN) | **`SIMULATED` 96.7% Drift Reduction** (60s simulation benchmark under magnetic noise) |
 
 ---
 

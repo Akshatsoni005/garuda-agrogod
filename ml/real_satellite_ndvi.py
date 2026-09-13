@@ -58,16 +58,23 @@ def generate_vrt_prescription_zones(ndvi_matrix: np.ndarray, base_rate_l_ha: flo
     return {
         "mean_ndvi": round(mean_ndvi, 3),
         "zone_distribution": {
-            "healthy_vigour_pct": round(pct_healthy, 1),
-            "moderate_stress_pct": round(pct_moderate, 1),
-            "severe_infection_pct": round(pct_severe, 1)
+            "HEALTHY_VIGOROUS_pct": round(pct_healthy, 1),
+            "MODERATE_STRESS_ZONE_pct": round(pct_moderate, 1),
+            "SEVERE_STRESS_CANDIDATE_pct": round(pct_severe, 1)
         },
         "vrt_prescription": {
             "blanket_rate_l_ha": base_rate_l_ha,
             "vrt_average_rate_l_ha": round(base_rate_l_ha * vrt_weighted_factor, 2),
             "chemical_reduction_pct": chemical_saved_pct
         },
-        "raster_shape": list(ndvi_matrix.shape)
+        "raster_shape": list(ndvi_matrix.shape),
+        "data_methodology": {
+            "source": "CALCULATED_SYNTHETIC",
+            "algorithm": "Real NumPy NDVI=(NIR-Red)/(NIR+Red) on synthetic reflectance arrays",
+            "thresholds_source": "Tucker 1979, Rouse et al 1974 NDVI vegetation indices",
+            "disease_note": "Low NDVI indicates vegetation stress, NOT confirmed disease. UAV visual confirmation required before prescription.",
+            "vrt_zones": {"ndvi_gt_0.50": "No spray", "ndvi_0.35_to_0.50": "50% rate", "ndvi_lt_0.35": "Full rate"}
+        }
     }
 
 def create_synthetic_field_reflectance(grid_size: int = 100) -> Tuple[np.ndarray, np.ndarray]:

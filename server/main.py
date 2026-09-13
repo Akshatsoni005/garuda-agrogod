@@ -82,7 +82,7 @@ FARM_PRESETS = {
             "lat": 30.8530,
             "lon": 75.8665,
             "radius_m": 38.0,
-            "ndvi": 0.275,
+            "ndvi": 0.267,
             "cause": "Yellow Rust Pustule Outbreak (Sector 04)"
         }
     },
@@ -229,6 +229,26 @@ FARM_PRESETS = {
     }
 }
 
+# ─── Data Source Taxonomy ─────────────────────────────────────────────────────
+# Every API response should include data_source from this set:
+# LIVE   - Real hardware reading (ESP32, sensor, GPS)
+# SIMULATED - Software-generated synthetic value
+# CALCULATED - Mathematically derived from real inputs (NDVI from real B04/B08)
+# MODELLED - Physics/agronomic model output, not yet field-validated
+# ESTIMATED - Statistical inference, sub-pixel extrapolation
+DATA_SOURCE = {
+    "drone_telemetry": "SIMULATED",      # ESP32 simulates orbit; not airborne
+    "field_sensor": "SIMULATED",         # ESP32 uses random() drift; no real probe
+    "ndvi_endpoint": "CALCULATED_SYNTHETIC",  # Real NumPy math on synthetic reflectance
+    "cv_detection": "CALCULATED_SYNTHETIC",   # Real OpenCV on synthetic crop image
+    "bio_nav_benchmark": "SIMULATED",    # Simulation benchmark, not real IMU
+    "drift_model": "MODELLED",           # Empirical formula, not field-validated
+    "roi_model": "MODELLED",             # Economic model, not field-trial data
+    "farm_presets": "LITERATURE_BASED",  # Based on published Sentinel-2 reflectance ranges
+    "spad_index": "ESTIMATED",           # Derived from hotspot proximity model, not instrument
+    "chemical_savings": "MODELLED",      # VRT volume model, efficacy unvalidated
+}
+
 current_state = {
     "drone": {
         "device_id": "garuda_drone_alpha",
@@ -250,7 +270,7 @@ current_state = {
     "weather": {
         "wind_speed_kmh": 6.8,
         "wind_direction_deg": 135,
-        "safety_status": "OPTIMAL_CONDITIONS",
+        "safety_status": "MODELLED_LOW_RISK",
         "recommended_buffer_m": 2.8
     },
     "vrt_stats": {
@@ -324,18 +344,29 @@ async def receive_field_telemetry(data: FieldPacket):
 
 @app.post("/api/vrt/toggle_spray")
 async def toggle_vrt_spray():
+    """Toggles simulated spray state in cockpit digital twin.
+    SAFETY GUARD: Physical actuator commanding over unauthenticated internet is locked.
+    This toggle modifies digital twin state only.
+    """
     current_state["drone"]["spraying"] = not current_state["drone"]["spraying"]
-    status_label = "ACTIVE_SPRAYING" if current_state["drone"]["spraying"] else "STANDBY"
+    status_label = "ACTIVE_SPRAYING (SIM)" if current_state["drone"]["spraying"] else "STANDBY"
     current_state["vrt_stats"]["status"] = status_label
     await broadcast({
         "type": "VRT_STATUS_UPDATE",
         "data": {
             "spraying": current_state["drone"]["spraying"],
             "status": status_label,
-            "vrt_stats": current_state["vrt_stats"]
+            "vrt_stats": current_state["vrt_stats"],
+            "mode": "SIMULATION_TWIN_ONLY"
         }
     })
-    return {"status": "ok", "spraying": current_state["drone"]["spraying"]}
+    return {
+        "status": "ok",
+        "spraying": current_state["drone"]["spraying"],
+        "control_mode": "SIMULATION_TWIN_ONLY",
+        "safety_guard": "PHYSICAL_ACTUATION_LOCKED",
+        "data_source": "SIMULATED"
+    }
 
 @app.post("/api/mission/generate")
 async def api_generate_mission(req: MissionRequest):
@@ -401,7 +432,10 @@ async def calculate_farmer_roi(req: RoiRequest):
         "net_money_saved_inr": net_savings_inr,
         "water_saved_liters": water_saved_liters,
         "chemical_saved_pct": chemical_saved_pct,
-        "payback_period": "Immediate (First Spray Session)"
+        "chemical_saved_pct_note": "Conservative fleet-average (62%). Per-field VRT savings range 80-90% depending on infestation area.",
+        "payback_period": "Immediate (First Spray Session)",
+        "data_source": "MODELLED",
+        "model_note": "Economic model based on published ICAR input costs (2023-24). Chemical efficacy at reduced rates unvalidated by field trial."
     }
 
 @app.post("/api/real/ndvi")
@@ -409,6 +443,8 @@ async def run_real_satellite_ndvi(grid_size: int = 100):
     red, nir = create_synthetic_field_reflectance(grid_size)
     ndvi_matrix = compute_real_ndvi_raster(red, nir)
     report = generate_vrt_prescription_zones(ndvi_matrix)
+    report["data_source"] = "CALCULATED_SYNTHETIC"
+    report["data_note"] = "Real NumPy NDVI algorithm applied to synthetic reflectance arrays. Not real Sentinel-2 ingestion."
     await broadcast({"type": "REAL_NDVI_REPORT", "data": report})
     return report
 
@@ -416,6 +452,8 @@ async def run_real_satellite_ndvi(grid_size: int = 100):
 async def run_real_computer_vision_spot_detect(speed_m_s: float = 3.0, offset_m: float = 0.6):
     frame = create_synthetic_crop_image()
     cv_res = detect_foliar_pathology_and_triggers(frame, ground_speed_m_s=speed_m_s, camera_to_nozzle_offset_m=offset_m)
+    cv_res["data_source"] = "CALCULATED_SYNTHETIC"
+    cv_res["data_note"] = "Real OpenCV pipeline applied to synthetic crop frame. Yellow-lesion candidate detector, not disease classifier."
     await broadcast({"type": "REAL_CV_DETECTION", "data": cv_res})
     return cv_res
 
@@ -472,10 +510,9 @@ async def sample_gee_point(req: SamplePointRequest):
 
     if dist_m <= radius:
         # Inside infection core
-        ratio = 1.0 - (dist_m / radius) * 0.5
-        ndvi = round(hotspot["ndvi"] + (1.0 - ratio) * 0.15, 3)
         b04_red = 0.165
         b08_nir = 0.285
+        ndvi = round((b08_nir - b04_red) / (b08_nir + b04_red), 3)  # = 0.267, exact match with band physics
         spad = round(21.4 + (dist_m / radius) * 8.0, 1)
         lai = round(1.2 + (dist_m / radius) * 0.8, 2)
         vrt_pwm_pct = 100
@@ -510,6 +547,8 @@ async def sample_gee_point(req: SamplePointRequest):
         "farm_name": farm["name"],
         "crop": farm["crop"],
         "growth_stage": farm["growth_stage"],
+        "data_source": "MODELLED",
+        "data_note": "Spectral values modelled from farm literature baseline + proximity-based stress gradient. Not real Sentinel-2 pixel query.",
         "spectral_bands": {
             "b02_blue_490nm": farm["reflectance"]["b02_blue"],
             "b03_green_560nm": farm["reflectance"]["b03_green"],
@@ -520,7 +559,7 @@ async def sample_gee_point(req: SamplePointRequest):
         "indices": {
             "ndvi": ndvi,
             "ndwi": ndwi,
-            "spad_chlorophyll": spad,
+            "chlorophyll_index_estimated": spad,
             "leaf_area_index": lai,
             "fapar": farm["fapar"]
         },
@@ -567,6 +606,15 @@ async def simulate_gps_denied_flight(req: BioNavSimulateRequest):
         mag_drift_deg_per_min=req.mag_drift_deg_per_min,
         gyro_bias_rad_s=req.gyro_bias_rad_s
     )
+    # P0 FIX: Normalize schema so frontend can access both formats
+    # Frontend expects: d.metrics.drift_error_reduction_pct, d.metrics.naive_dr_drift_m, etc.
+    summary = res.get("benchmark_summary", {})
+    res["metrics"] = {
+        "naive_dr_drift_m": summary.get("final_dead_reckoning_drift_m", 0.0),
+        "biological_cx_drift_m": summary.get("final_biological_drift_m", 0.0),
+        "drift_error_reduction_pct": summary.get("drift_reduction_pct", 0.0),
+        "homing_target_reached": summary.get("homing_success", False)
+    }
     await broadcast({"type": "BIO_NAV_SIMULATION_RESULT", "data": res})
     return res
 
@@ -576,6 +624,7 @@ async def get_mavlink_odometry(alt_m: float = 12.0):
 
 @app.websocket("/ws/cockpit")
 async def cockpit_websocket(websocket: WebSocket):
+    # NOTE: WebSocket controls simulation state. Hardware integration requires device auth.
     await websocket.accept()
     connected_websockets.add(websocket)
     await websocket.send_text(json.dumps({"type": "INITIAL_STATE", "data": current_state}))
@@ -585,6 +634,7 @@ async def cockpit_websocket(websocket: WebSocket):
             try:
                 cmd = json.loads(msg)
                 if cmd.get("action") == "TOGGLE_SPRAY":
+                    # Safety: this toggles simulation state only, not real hardware
                     await toggle_vrt_spray()
             except Exception:
                 pass

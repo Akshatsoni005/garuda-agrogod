@@ -33,13 +33,13 @@ def calculate_spray_drift(wind_speed_kmh: float, flight_alt_m: float = 3.0, drop
     drift_distance_m = round((wind_m_s * flight_alt_m * 0.45) * (300.0 / max(droplet_size_microns, 100)), 2)
     
     if wind_speed_kmh > 20:
-        safety_status = "CRITICAL_DRIFT_HAZARD"
+        safety_status = "CRITICAL_DRIFT_HAZARD_MODEL"
         can_spray = False
     elif wind_speed_kmh > 12:
-        safety_status = "CAUTION_BUFFER_REQUIRED"
+        safety_status = "CAUTION_BUFFER_REQUIRED_MODEL"
         can_spray = True
     else:
-        safety_status = "OPTIMAL_CONDITIONS"
+        safety_status = "MODELLED_LOW_RISK"
         can_spray = True
 
     return {
@@ -47,7 +47,9 @@ def calculate_spray_drift(wind_speed_kmh: float, flight_alt_m: float = 3.0, drop
         "flight_alt_m": flight_alt_m,
         "recommended_buffer_m": drift_distance_m,
         "safety_status": safety_status,
-        "can_spray": can_spray
+        "can_spray": can_spray,
+        "data_source": "MODELLED",
+        "model_note": "Empirical drift estimate for medium nozzles (250um). Does not account for humidity, formulation, atmospheric stability, or terrain."
     }
 
 def generate_vrt_flight_mission(
@@ -93,10 +95,27 @@ def generate_vrt_flight_mission(
             start_lon = min(lon_range) if direction == 1 else max(lon_range)
             end_lon = max(lon_range) if direction == 1 else min(lon_range)
 
-            # Check if start or end point intersects a stress hotspot
+            def segment_intersects_zone(lat, lon_a, lon_b, zone):
+                """Check if horizontal sweep line at `lat` from lon_a to lon_b
+                intersects a circular stress zone. Uses point-to-segment distance."""
+                zx = (lat - zone["lat"]) * 111000.0
+                # Project lon_a..lon_b segment onto metric X axis
+                ax = (lon_a - zone["lon"]) * 111000.0 * math.cos(mean_lat_rad)
+                bx = (lon_b - zone["lon"]) * 111000.0 * math.cos(mean_lat_rad)
+                # Closest point on segment to zone center (segment is horizontal in Y=zx plane)
+                t = max(0.0, min(1.0, -ax / (bx - ax) if bx != ax else 0.0))
+                closest_x = ax + t * (bx - ax)
+                dist = math.hypot(closest_x, zx)
+                return dist <= zone.get("radius_m", 25.0)
+
+            def sweep_intersects_any_zone(lat, lon_a, lon_b):
+                return any(segment_intersects_zone(lat, lon_a, lon_b, z) for z in stress_zones)
+
+            sweep_has_spray = sweep_intersects_any_zone(current_lat, start_lon, end_lon)
+
+            # Determine per-endpoint spray state for split corridors
             def is_stressed(lat, lon):
                 for z in stress_zones:
-                    # Euclidean distance approximation
                     dist = math.hypot((lat - z["lat"]) * 111000, (lon - z["lon"]) * 111000 * math.cos(mean_lat_rad))
                     if dist <= z.get("radius_m", 25.0):
                         return True
@@ -104,6 +123,10 @@ def generate_vrt_flight_mission(
 
             spray_start = is_stressed(current_lat, start_lon)
             spray_end = is_stressed(current_lat, end_lon)
+            # If segment crosses a zone but endpoints miss it, mark both as spray
+            if sweep_has_spray and not spray_start and not spray_end:
+                spray_start = True
+                spray_end = True
 
             waypoints.append({
                 "seq": seq,

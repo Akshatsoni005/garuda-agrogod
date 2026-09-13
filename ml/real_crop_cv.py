@@ -1,7 +1,8 @@
 """
-Garuda AgroGod - Real Computer Vision Pipeline for Green-on-Green Disease & Weed Spot Spraying
-Uses OpenCV and NumPy to process crop imagery, extract vegetation (ExG Index),
-isolate fungal/pest lesions in HSV space, and compute physical solenoid nozzle trigger timings.
+Garuda AgroGod - Yellow-Lesion Candidate Detector using HSV thresholding (ExG + hue band).
+Detects yellow-colored pixels on green vegetation as spray candidates.
+NOT a trained disease classifier — false positives include senescence, nutrient deficiency, dust.
+Requires UAV visual confirmation.
 """
 
 import cv2

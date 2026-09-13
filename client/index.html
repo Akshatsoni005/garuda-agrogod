@@ -120,9 +120,21 @@
     .ndvi-ramp {
       background: linear-gradient(to right, #b91c1c 0%, #f97316 25%, #eab308 50%, #84cc16 75%, #15803d 100%);
     }
+    /* Data Source Badge Taxonomy (P0 Audit Fix) */
+    .badge-live { background: #10b981; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
+    .badge-sim { background: #7c3aed; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
+    .badge-calc { background: #2563eb; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
+    .badge-model { background: #d97706; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
+    .badge-est { background: #4b5563; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
   </style>
 </head>
 <body class="relative w-screen h-screen">
+
+  <!-- P0 Audit Safeguard: Simulation Mode Notification Banner -->
+  <div id="sim-banner" style="background:#7c3aed;color:#ffffff;text-align:center;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:0.8px;z-index:9999;position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.2);">
+    <span>⚠️ <strong>DIGITAL TWIN SIMULATION MODE</strong> — Algorithms and flight physics active on calibrated synthetic telemetry. Connect physical ESP32 + Pixhawk for LIVE drone link.</span>
+    <button onclick="document.getElementById('sim-banner').style.display='none'" style="background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.4);color:white;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px;font-weight:800;">DISMISS</button>
+  </div>
 
   <!-- Map Canvas -->
   <div id="map"></div>
@@ -172,23 +184,23 @@
       <!-- Live Scientific Telemetry Badges -->
       <div class="hidden xl:flex items-center space-x-5 text-xs">
         <div class="text-center">
-          <span class="text-gray-400 block text-[8px]">SATELLITE SENSOR</span>
+          <span class="text-gray-400 block text-[8px]"><span class="badge-calc mr-1">CALCULATED</span>MACRO SENSOR</span>
           <span class="text-emerald-300 font-bold">SENTINEL-2 MSI (10m)</span>
         </div>
         <div class="h-5 w-[1px] bg-emerald-500/30"></div>
         <div class="text-center">
-          <span class="text-gray-400 block text-[8px]">HARDWARE MESH</span>
-          <span id="esp-status" class="text-yellow-400 font-bold">ESP32-S3 (ONLINE)</span>
+          <span class="text-gray-400 block text-[8px]"><span class="badge-sim mr-1">SIM</span>TELEMETRY MESH</span>
+          <span id="esp-status" class="text-yellow-400 font-bold">ESP32-S3 BEACON</span>
         </div>
         <div class="h-5 w-[1px] bg-emerald-500/30"></div>
         <div class="text-center">
-          <span class="text-gray-400 block text-[8px]">PESTICIDE REDUCTION</span>
+          <span class="text-gray-400 block text-[8px]"><span class="badge-model mr-1">MODELLED</span>PESTICIDE VOLUME</span>
           <span class="text-emerald-400 font-black text-sm">87.5% SAVED</span>
         </div>
         <div class="h-5 w-[1px] bg-emerald-500/30"></div>
         <div class="text-center">
-          <span class="text-gray-400 block text-[8px]">SPRAY DRIFT SAFETY</span>
-          <span id="drift-status" class="text-emerald-400 font-bold text-xs">SAFE (2.8m Buffer)</span>
+          <span class="text-gray-400 block text-[8px]"><span class="badge-model mr-1">MODELLED</span>DRIFT RISK</span>
+          <span id="drift-status" class="text-emerald-400 font-bold text-xs">LOW RISK (2.8m Buffer)</span>
         </div>
       </div>
 
@@ -274,7 +286,7 @@
       <div class="tactical-glass p-3.5 rounded-lg space-y-2 text-xs">
         <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5">
           <span class="font-bold text-emerald-400 font-orbitron">GARUDA DRONE ALPHA</span>
-          <span id="drone-badge" class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40">AIRBORNE</span>
+          <span id="drone-badge" class="px-2 py-0.5 rounded text-[10px] bg-purple-950 text-purple-300 border border-purple-500/40 font-bold"><span class="badge-sim mr-1">SIM</span>AIRBORNE</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-gray-300 text-[11px]">
           <div>LAT: <span id="drone-lat" class="text-white font-bold">30.852500</span></div>
@@ -290,7 +302,7 @@
       <div class="tactical-glass p-3.5 rounded-lg space-y-2 text-xs">
         <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5">
           <span class="font-bold text-emerald-400 font-orbitron">GROUND ESP32-S3 NODE</span>
-          <span class="text-[10px] text-emerald-400 font-bold">CANOPY SENSORS</span>
+          <span class="text-[10px] text-purple-400 font-bold"><span class="badge-sim mr-1">SIM</span>SIMULATED CANOPY</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-gray-300 text-[11px]">
           <div>SOIL MOISTURE: <span id="field-soil" class="text-cyan-300 font-bold">24.8% (OPTIMAL)</span></div>
@@ -304,14 +316,14 @@
       <div class="tactical-glass p-3.5 rounded-lg flex flex-col justify-between space-y-2">
         <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5 text-xs">
           <span class="font-bold text-emerald-400 font-orbitron">VRT MISSION COMMAND</span>
-          <span id="spray-status" class="text-emerald-400 font-bold">SYSTEM ARMED</span>
+          <span id="spray-status" class="text-emerald-400 font-bold">DIGITAL TWIN ARMED</span>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <button onclick="planVrtMission()" id="plan-btn" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-400 text-cyan-200 py-1.5 rounded text-[11px] font-bold uppercase transition">
             Plan VRT Grid
           </button>
           <button onclick="triggerVRTSpray()" id="spray-btn" class="bg-yellow-600 hover:bg-yellow-500 border border-yellow-300 text-black py-1.5 rounded text-[11px] font-black uppercase transition">
-            Launch Spray
+            Launch Spray (SIM)
           </button>
           <button onclick="exportMavlink()" id="mav-btn" class="bg-gray-900 hover:bg-gray-800 border border-gray-600 text-gray-200 py-1.5 rounded text-[10px] font-bold uppercase transition">
             Export MAVLink 2.0
@@ -320,7 +332,7 @@
             Inspect Infection
           </button>
         </div>
-        <p id="tactical-status" class="text-[10px] text-gray-400 italic truncate">Telemetry stream active. 100Hz IMU + Central Complex heading locked.</p>
+        <p id="tactical-status" class="text-[10px] text-gray-400 italic truncate"><span class="badge-sim mr-1">SIM</span>Telemetry active. 2 Hz simulated ESP32 beacon + CX heading locked.</p>
       </div>
 
     </div>
@@ -608,10 +620,10 @@
           <div>
             <div class="flex justify-between items-center border-b border-gray-800 pb-1.5">
               <span class="font-bold text-yellow-400 font-orbitron">GPS-DENIED BENCHMARK</span>
-              <span class="text-[10px] bg-red-950 text-red-300 border border-red-500/40 px-2 py-0.5 rounded">GPS BLACKOUT</span>
+              <span class="text-[10px] bg-purple-950 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded font-bold"><span class="badge-sim mr-1">SIM</span>SIMULATOR</span>
             </div>
             <p class="text-[10px] text-gray-400 mt-2 leading-relaxed">
-              Drone ESC motors (80A) trigger severe electromagnetic field distortion. Under dense tree canopy, GPS lock is lost.
+              Synthetic benchmark with 80A ESC magnetic distortion + gyro bias. Compares naive dead-reckoning vs. Drosophila Central Complex ring attractor.
             </p>
 
             <!-- Scoreboard -->
@@ -625,7 +637,7 @@
                 <span id="bench-bio-drift" class="text-emerald-400 font-black text-sm">-- m</span>
               </div>
               <div class="border-t border-gray-800 pt-1.5 flex justify-between items-center font-bold">
-                <span class="text-yellow-400">DRIFT ERROR REDUCTION:</span>
+                <span class="text-yellow-400"><span class="badge-sim mr-1">SIM</span>DRIFT REDUCTION:</span>
                 <span id="bench-reduction-pct" class="text-yellow-400 font-black text-base">--%</span>
               </div>
               <div class="flex justify-between items-center text-[10px] text-cyan-300">
@@ -1296,10 +1308,16 @@
           body: JSON.stringify({ duration_s: 60.0, wind_gust_strength: 0.6 })
         });
         const d = await res.json();
-        document.getElementById('bench-dr-drift').innerText = d.metrics.naive_dr_drift_m.toFixed(2) + ' m';
-        document.getElementById('bench-bio-drift').innerText = d.metrics.biological_cx_drift_m.toFixed(2) + ' m';
-        document.getElementById('bench-reduction-pct').innerText = d.metrics.drift_error_reduction_pct.toFixed(1) + '%';
-        document.getElementById('bench-homing-status').innerText = d.metrics.homing_target_reached ? 'SUCCESS (±1.5m)' : 'WITHIN TOLERANCE';
+        const metrics = d.metrics || {
+          naive_dr_drift_m: d.benchmark_summary?.final_dead_reckoning_drift_m ?? 0,
+          biological_cx_drift_m: d.benchmark_summary?.final_biological_drift_m ?? 0,
+          drift_error_reduction_pct: d.benchmark_summary?.drift_reduction_pct ?? 0,
+          homing_target_reached: d.benchmark_summary?.homing_success ?? false
+        };
+        document.getElementById('bench-dr-drift').innerText = (metrics.naive_dr_drift_m ?? 0).toFixed(2) + ' m';
+        document.getElementById('bench-bio-drift').innerText = (metrics.biological_cx_drift_m ?? 0).toFixed(2) + ' m';
+        document.getElementById('bench-reduction-pct').innerText = (metrics.drift_error_reduction_pct ?? 0).toFixed(1) + '%';
+        document.getElementById('bench-homing-status').innerText = metrics.homing_target_reached ? 'SUCCESS (±1.5m)' : 'WITHIN TOLERANCE';
         document.getElementById('bench-homing-status').className = 'font-bold text-emerald-400';
         document.getElementById('run-sim-btn').innerText = '🚀 Run 60s Flight Benchmark';
       } catch (err) {

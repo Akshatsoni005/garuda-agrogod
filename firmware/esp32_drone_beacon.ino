@@ -2,7 +2,20 @@
  * Garuda AgroGod - ESP32-S3 Drone Telemetry Beacon Firmware
  * Microcontroller: ESP32-S3 (Dual Type-C)
  * Framework: Arduino / ESP-IDF
- * 
+ *
+ * STATUS: TELEMETRY SIMULATOR
+ * This firmware simulates autonomous patrol orbit over a crop grid.
+ * It does NOT read real GPS, real battery ADC, or a real flight controller.
+ * Coordinates and battery are software-generated for demonstration/prototyping.
+ *
+ * HARDWARE INTEGRATION PATH:
+ *   Replace drone_lat/lon simulation loop with:
+ *     - TinyGPS++ reading NMEA from GPS module (UART2)
+ *   Replace battery_pct simulation with:
+ *     - ADC read on battery voltage divider pin
+ *   Replace vrt_spraying_active with:
+ *     - GPIO read from Pixhawk MAVLink SERVO output
+ *
  * Ponytail: Lightweight JSON telemetry broadcaster over standard HTTP/REST.
  * Connects to local Wi-Fi and pushes 6-DOF coordinates + VRT spray status to AgroGod Server.
  */

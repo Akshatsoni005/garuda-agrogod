@@ -77,10 +77,21 @@
       height: 8px;
       border-bottom: 2px solid #00ffcc;
       border-right: 2px solid #00ffcc;
-    }
+    /* Data Source Badge Taxonomy (P0 Audit Fix) */
+    .badge-live { background: #10b981; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
+    .badge-sim { background: #7c3aed; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
+    .badge-calc { background: #2563eb; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
+    .badge-model { background: #d97706; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
+    .badge-est { background: #4b5563; color: #ffffff; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px; display: inline-block; vertical-align: middle; }
   </style>
 </head>
 <body class="relative">
+
+  <!-- P0 Simulation Safeguard Banner -->
+  <div id="sim-banner-3d" style="background:#7c3aed;color:#ffffff;text-align:center;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:0.8px;z-index:9999;position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.2);">
+    <span>⚠️ <strong>3D DIGITAL TWIN SIMULATION</strong> — Trajectory and coordinates driven by ESP32 beacon simulation engine.</span>
+    <button onclick="document.getElementById('sim-banner-3d').style.display='none'" style="background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.4);color:white;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px;font-weight:800;">DISMISS</button>
+  </div>
 
   <!-- Cesium 3D Globe Container -->
   <div id="cesiumContainer"></div>
@@ -117,18 +128,18 @@
         </div>
         <div class="h-6 w-[1px] bg-emerald-500/30"></div>
         <div class="text-center">
-          <span class="text-gray-400 block text-[9px]">HARDWARE MESH</span>
-          <span id="hw-mesh-status" class="text-yellow-400 font-bold">ESP32-S3 (ONLINE)</span>
+          <span class="text-gray-400 block text-[9px]"><span class="badge-sim mr-1">SIM</span>TELEMETRY MESH</span>
+          <span id="hw-mesh-status" class="text-yellow-400 font-bold">ESP32-S3 BEACON</span>
         </div>
         <div class="h-6 w-[1px] bg-emerald-500/30"></div>
         <div class="text-center">
-          <span class="text-gray-400 block text-[9px]">PESTICIDE REDUCTION</span>
-          <span class="text-emerald-400 font-bold text-sm">62.4% VERIFIED</span>
+          <span class="text-gray-400 block text-[9px]"><span class="badge-model mr-1">MODELLED</span>PESTICIDE VOLUME</span>
+          <span class="text-emerald-400 font-bold text-sm">62.4% SAVINGS</span>
         </div>
         <div class="h-6 w-[1px] bg-emerald-500/30"></div>
         <div class="text-center">
-          <span class="text-gray-400 block text-[9px]">SPRAY DRIFT SAFETY</span>
-          <span class="text-emerald-400 font-bold text-xs">SAFE (3.2m Buffer)</span>
+          <span class="text-gray-400 block text-[9px]"><span class="badge-model mr-1">MODELLED</span>DRIFT RISK</span>
+          <span class="text-emerald-400 font-bold text-xs">LOW RISK (3.2m Buffer)</span>
         </div>
       </div>
 
@@ -192,7 +203,7 @@
       <div class="tactical-glass corner-bracket p-4 rounded-lg space-y-2 text-xs">
         <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5">
           <span class="font-bold text-emerald-400 font-orbitron">DRONE ALPHA [3D TELEMETRY]</span>
-          <span id="drone-status-pill" class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40">AIRBORNE</span>
+          <span id="drone-status-pill" class="px-2 py-0.5 rounded text-[10px] bg-purple-950 text-purple-300 border border-purple-500/40 font-bold"><span class="badge-sim mr-1">SIM</span>AIRBORNE</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-gray-300">
           <div>LAT: <span id="d-lat" class="text-white font-bold">26.912400</span></div>

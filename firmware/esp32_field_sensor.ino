@@ -1,7 +1,18 @@
 /*
  * Garuda AgroGod - ESP32-S3 Ground Field Station Firmware
  * Microcontroller: ESP32-S3 (Dual Type-C)
- * 
+ *
+ * STATUS: ENVIRONMENTAL SIMULATOR
+ * This firmware does NOT read a real DHT22, BME280, or soil moisture probe.
+ * Temperature, humidity, and soil moisture drift via random() offsets for
+ * demonstration purposes. Values are agronomically plausible but synthetic.
+ *
+ * HARDWARE INTEGRATION PATH:
+ *   Replace random-walk variables with:
+ *     - DHT22 on GPIO 4 for temp/humidity (Adafruit DHT library)
+ *     - Capacitive soil moisture sensor on ADC pin (GPIO 34)
+ *     - Optional: BME280 over I2C for pressure + altitude
+ *
  * Ponytail: Streams ambient microclimate & soil moisture data to the AgroGod cockpit.
  * If external sensors (DHT22/BME280/Soil Probe) are not connected, runs on internal
  * temperature sensor + calibrated realistic environmental model.
