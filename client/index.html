@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GARUDA // AGRO-GOD COMMAND DECK</title>
+  
+  <!-- Tailwind CSS & Lucide Icons via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;800;900&display=swap');
+    
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #030712;
+      color: #00ffcc;
+      font-family: 'Share Tech Mono', monospace;
+      overflow: hidden;
+      user-select: none;
+    }
+    .font-orbitron { font-family: 'Orbitron', sans-serif; }
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #020408;
+      z-index: 1;
+    }
+    .scanlines {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+    .flir-mode {
+      filter: contrast(2.2) invert(0.9) hue-rotate(185deg) saturate(2.5) !important;
+    }
+    .tactical-border {
+      border: 1px solid rgba(0, 255, 204, 0.3);
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+    }
+    /* Pulsing drone marker */
+    .drone-radar-icon {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      background: #00ffcc;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 20px #00ffcc;
+    }
+    .drone-radar-ping {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      width: 48px;
+      height: 48px;
+      border: 2px solid #00ffcc;
+      border-radius: 50%;
+      animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    .spraying-ping {
+      background: #eab308 !important;
+      box-shadow: 0 0 25px #eab308 !important;
+    }
+    @keyframes ping {
+      75%, 100% {
+        transform: scale(2.2);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen">
+
+  <!-- Map Container -->
+  <div id="map"></div>
+
+  <!-- CRT Scanline Tactical Layer -->
+  <div id="scanline-layer" class="scanlines absolute inset-0 z-10 pointer-events-none"></div>
+
+  <!-- Tactical HUD Interface -->
+  <div class="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-4 md:p-6">
+    
+    <!-- Header Command Bar -->
+    <div class="flex justify-between items-center bg-gray-950/85 backdrop-blur-md tactical-border px-5 py-3 rounded-lg pointer-events-auto">
+      <div class="flex items-center space-x-4">
+        <div class="w-3.5 h-3.5 bg-emerald-400 rounded-full animate-ping"></div>
+        <div>
+          <h1 class="text-xl md:text-2xl font-black tracking-widest text-emerald-400 font-orbitron">
+            GARUDA // AGRO-GOD
+          </h1>
+          <p class="text-[10px] text-gray-400 tracking-wider">AUTONOMOUS DUAL-DRONE FLEET & FARMLAND DIGITAL TWIN</p>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Bar -->
+      <div class="hidden lg:flex items-center space-x-6 text-xs">
+        <div class="text-center">
+          <span class="text-gray-400 block text-[9px]">SATELLITE LINK</span>
+          <span class="text-emerald-300 font-bold">SENTINEL-2A (10m)</span>
+        </div>
+        <div class="h-6 w-[1px] bg-emerald-500/30"></div>
+        <div class="text-center">
+          <span class="text-gray-400 block text-[9px]">HARDWARE MESH</span>
+          <span id="esp-status" class="text-yellow-400 font-bold">ESP32-S3 (ONLINE)</span>
+        </div>
+        <div class="h-6 w-[1px] bg-emerald-500/30"></div>
+        <div class="text-center">
+          <span class="text-gray-400 block text-[9px]">CHEMICAL REDUCTION</span>
+          <span class="text-emerald-400 font-bold text-sm">62.4% SAVED</span>
+        </div>
+        <div class="h-6 w-[1px] bg-emerald-500/30"></div>
+        <div class="text-center">
+          <span class="text-gray-400 block text-[9px]">FARM SAVINGS</span>
+          <span class="text-yellow-400 font-bold text-sm">₹4,850 / HA</span>
+        </div>
+      </div>
+
+      <!-- Mode Toggles -->
+      <div class="flex space-x-2">
+        <button id="flir-btn" onclick="toggleFLIR()" class="bg-gray-900/90 hover:bg-gray-800 border border-emerald-500/50 text-emerald-300 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition">
+          FLIR Thermal
+        </button>
+        <button id="voice-btn" onclick="toggleVoiceControl()" class="bg-gray-900/90 hover:bg-gray-800 border border-emerald-500/50 text-emerald-300 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition flex items-center space-x-1">
+          <span>🎤 Voice AI</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Center Reticle Indicator (Optional Cosmetic) -->
+    <div class="self-center text-center opacity-30 text-xs tracking-widest pointer-events-none">
+      + LAT: <span id="center-lat">26.9124</span> | LON: <span id="center-lon">75.7873</span> +
+    </div>
+
+    <!-- Bottom Controls & Telemetry Dock -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pointer-events-auto">
+      
+      <!-- Panel 1: Live Drone Telemetry (from ESP32-S3 Beacon) -->
+      <div class="bg-gray-950/90 backdrop-blur-md tactical-border p-4 rounded-lg space-y-2 text-xs">
+        <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5">
+          <span class="font-bold text-emerald-400 font-orbitron">DRONE ALPHA [TELEMETRY]</span>
+          <span id="drone-badge" class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40">STANDBY</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-gray-300">
+          <div>LAT: <span id="drone-lat" class="text-white font-bold">26.912400</span></div>
+          <div>LON: <span id="drone-lon" class="text-white font-bold">75.787300</span></div>
+          <div>ALTITUDE: <span id="drone-alt" class="text-white font-bold">14.5 m</span></div>
+          <div>BATTERY: <span id="drone-bat" class="text-emerald-400 font-bold">98%</span></div>
+          <div>VRT FLOW: <span id="vrt-flow" class="text-yellow-400 font-bold">0.0 L/min</span></div>
+          <div>GPS FIX: <span class="text-emerald-400 font-bold">RTK (±2cm)</span></div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Ground Field Station (from ESP32-S3 Base Station) -->
+      <div class="bg-gray-950/90 backdrop-blur-md tactical-border p-4 rounded-lg space-y-2 text-xs">
+        <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5">
+          <span class="font-bold text-emerald-400 font-orbitron">GROUND FIELD NODE [IoT]</span>
+          <span class="text-[10px] text-gray-400">SECTOR 04</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-gray-300">
+          <div>SOIL MOISTURE: <span id="field-soil" class="text-cyan-300 font-bold">42.5%</span></div>
+          <div>TEMPERATURE: <span id="field-temp" class="text-white font-bold">29.8 °C</span></div>
+          <div>HUMIDITY: <span id="field-humidity" class="text-white font-bold">58.2%</span></div>
+          <div>DISEASE RISK: <span class="text-yellow-400 font-bold">MODERATE (Rust)</span></div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Tactical Action & VRT Controls -->
+      <div class="bg-gray-950/90 backdrop-blur-md tactical-border p-4 rounded-lg flex flex-col justify-between space-y-2">
+        <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5 text-xs">
+          <span class="font-bold text-emerald-400 font-orbitron">VRT MISSION CONTROL</span>
+          <span id="spray-status" class="text-yellow-400 font-bold">READY</span>
+        </div>
+        <div class="flex space-x-2">
+          <button onclick="toggleNDVI()" id="ndvi-btn" class="flex-1 bg-emerald-950 hover:bg-emerald-900 border border-emerald-400 text-emerald-200 py-2.5 rounded text-xs font-bold uppercase tracking-wider transition">
+            Toggle NDVI Layer
+          </button>
+          <button onclick="triggerVRTSpray()" id="spray-btn" class="flex-1 bg-yellow-600 hover:bg-yellow-500 border border-yellow-300 text-black py-2.5 rounded text-xs font-black uppercase tracking-wider transition shadow-[0_0_15px_rgba(234,179,8,0.4)]">
+            Launch Spot Spray
+          </button>
+        </div>
+        <p id="voice-transcript" class="text-[10px] text-gray-400 italic truncate">Voice AI ready. Click 'Voice AI' to speak commands.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // 1. Initialize Map with High-Resolution Satellite Tiles (Esri Satellite - No API Key Needed)
+    const farmCenter = [26.9124, 75.7873];
+    const map = L.map('map', {
+      zoomControl: false,
+      attributionControl: false
+    }).setView(farmCenter, 17);
+
+    // High resolution satellite imagery layer
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19
+    }).addTo(map);
+
+    // 2. Agricultural Farm Boundary Polygon
+    const farmPolygon = L.polygon([
+      [26.9135, 75.7858],
+      [26.9135, 75.7888],
+      [26.9113, 75.7888],
+      [26.9113, 75.7858]
+    ], {
+      color: '#00ffcc',
+      weight: 2,
+      fillColor: '#00ffcc',
+      fillOpacity: 0.08,
+      dashArray: '5, 5'
+    }).addTo(map);
+
+    // 3. Simulated NDVI Stress Zones (Red = Infected Blight, Green = Healthy)
+    let ndviLayer = null;
+    let isNdviActive = false;
+
+    function toggleNDVI() {
+      if (isNdviActive) {
+        if (ndviLayer) map.removeLayer(ndviLayer);
+        isNdviActive = false;
+        document.getElementById('ndvi-btn').classList.remove('bg-emerald-600');
+      } else {
+        // Red stress spot (representing yellow rust / pest infestation)
+        const stressSpot = L.circle([26.9128, 75.7878], {
+          radius: 35,
+          color: '#ef4444',
+          fillColor: '#ef4444',
+          fillOpacity: 0.5,
+          weight: 2
+        });
+
+        // Healthy green region
+        const healthySpot = L.circle([26.9120, 75.7865], {
+          radius: 50,
+          color: '#22c55e',
+          fillColor: '#22c55e',
+          fillOpacity: 0.35,
+          weight: 1
+        });
+
+        ndviLayer = L.layerGroup([stressSpot, healthySpot]).addTo(map);
+        isNdviActive = true;
+        document.getElementById('ndvi-btn').classList.add('bg-emerald-600');
+      }
+    }
+
+    // 4. Custom 3D-Look Drone Radar Marker
+    const droneIcon = L.divIcon({
+      className: 'drone-marker-container',
+      html: `
+        <div class="relative">
+          <div id="radar-ping" class="drone-radar-ping"></div>
+          <div id="radar-icon" class="drone-radar-icon flex items-center justify-center text-[10px] font-black text-black">G</div>
+        </div>
+      `,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+
+    const droneMarker = L.marker(farmCenter, { icon: droneIcon }).addTo(map);
+
+    // 5. WebSocket Telemetry Ingestion from FastAPI Backend
+    const loc = window.location;
+    const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = loc.hostname || 'localhost';
+    const wsPort = loc.port || '8000';
+    const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}/ws/cockpit`;
+
+    let isSpraying = false;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      console.log('[WebSocket] Connected to AgroGod Telemetry Bridge');
+      document.getElementById('esp-status').innerText = 'CONNECTED (LIVE)';
+      document.getElementById('esp-status').classList.remove('text-yellow-400');
+      document.getElementById('esp-status').classList.add('text-emerald-400');
+    };
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === 'DRONE_TELEMETRY' || (msg.type === 'INITIAL_STATE' && msg.data.drone)) {
+        const d = msg.data.drone || msg.data;
+        updateDroneHUD(d);
+      } else if (msg.type === 'FIELD_TELEMETRY' || (msg.type === 'INITIAL_STATE' && msg.data.field)) {
+        const f = msg.data.field || msg.data;
+        updateFieldHUD(f);
+      } else if (msg.type === 'VRT_STATUS_UPDATE') {
+        applyVrtStatus(msg.data.spraying);
+      }
+    };
+
+    socket.onclose = () => {
+      document.getElementById('esp-status').innerText = 'STANDALONE (OFFLINE)';
+      document.getElementById('esp-status').classList.add('text-red-400');
+    };
+
+    function updateDroneHUD(d) {
+      document.getElementById('drone-lat').innerText = d.lat.toFixed(6);
+      document.getElementById('drone-lon').innerText = d.lon.toFixed(6);
+      document.getElementById('drone-alt').innerText = d.alt + ' m';
+      document.getElementById('drone-bat').innerText = d.battery + '%';
+      
+      droneMarker.setLatLng([d.lat, d.lon]);
+
+      if (d.spraying !== isSpraying) {
+        applyVrtStatus(d.spraying);
+      }
+    }
+
+    function updateFieldHUD(f) {
+      if (f.temp_c) document.getElementById('field-temp').innerText = f.temp_c + ' °C';
+      if (f.humidity_pct) document.getElementById('field-humidity').innerText = f.humidity_pct + '%';
+      if (f.soil_moisture_pct) document.getElementById('field-soil').innerText = f.soil_moisture_pct + '%';
+    }
+
+    function applyVrtStatus(spraying) {
+      isSpraying = spraying;
+      const pingEl = document.getElementById('radar-ping');
+      const iconEl = document.getElementById('radar-icon');
+      const flowEl = document.getElementById('vrt-flow');
+      const badgeEl = document.getElementById('drone-badge');
+      const sprayStatusEl = document.getElementById('spray-status');
+      const sprayBtn = document.getElementById('spray-btn');
+
+      if (spraying) {
+        pingEl.classList.add('spraying-ping');
+        iconEl.classList.add('bg-yellow-400');
+        flowEl.innerText = '1.8 L/min';
+        badgeEl.innerText = 'ACTIVE VRT';
+        badgeEl.className = 'px-2 py-0.5 rounded text-[10px] bg-yellow-950 text-yellow-300 border border-yellow-500/40';
+        sprayStatusEl.innerText = 'SPRAYING';
+        sprayStatusEl.className = 'text-yellow-400 font-bold animate-pulse';
+        sprayBtn.innerText = 'STOP SPRAY';
+        sprayBtn.classList.replace('bg-yellow-600', 'bg-red-600');
+      } else {
+        pingEl.classList.remove('spraying-ping');
+        iconEl.classList.remove('bg-yellow-400');
+        flowEl.innerText = '0.0 L/min';
+        badgeEl.innerText = 'STANDBY';
+        badgeEl.className = 'px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40';
+        sprayStatusEl.innerText = 'READY';
+        sprayStatusEl.className = 'text-emerald-400 font-bold';
+        sprayBtn.innerText = 'LAUNCH SPOT SPRAY';
+        sprayBtn.classList.replace('bg-red-600', 'bg-yellow-600');
+      }
+    }
+
+    async function triggerVRTSpray() {
+      try {
+        const res = await fetch('/api/vrt/toggle_spray', { method: 'POST' });
+        const data = await res.json();
+        applyVrtStatus(data.spraying);
+      } catch (err) {
+        // Fallback for standalone demo
+        applyVrtStatus(!isSpraying);
+      }
+    }
+
+    // 6. FLIR Thermal Vision Toggle
+    let isFlir = false;
+    function toggleFLIR() {
+      isFlir = !isFlir;
+      const mapEl = document.getElementById('map');
+      if (isFlir) {
+        mapEl.classList.add('flir-mode');
+        document.getElementById('flir-btn').classList.add('bg-cyan-600', 'text-black');
+      } else {
+        mapEl.classList.remove('flir-mode');
+        document.getElementById('flir-btn').classList.remove('bg-cyan-600', 'text-black');
+      }
+    }
+
+    // 7. Voice AI Commands (Web Speech API)
+    let recognition = null;
+    let isListening = false;
+
+    function toggleVoiceControl() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('Web Speech API is not supported in this browser. Please use Chrome or Edge.');
+        return;
+      }
+
+      if (isListening) {
+        recognition.stop();
+        isListening = false;
+        document.getElementById('voice-btn').classList.remove('bg-red-600');
+        document.getElementById('voice-transcript').innerText = 'Voice AI idle.';
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isListening = true;
+        document.getElementById('voice-btn').classList.add('bg-red-600', 'text-white');
+        document.getElementById('voice-transcript').innerText = 'Listening for commands: "spray", "ndvi", "flir"...';
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+        document.getElementById('voice-transcript').innerText = `Command recognized: "${transcript}"`;
+
+        if (transcript.includes('spray') || transcript.includes('launch') || transcript.includes('start')) {
+          triggerVRTSpray();
+        } else if (transcript.includes('ndvi') || transcript.includes('health') || transcript.includes('crop')) {
+          toggleNDVI();
+        } else if (transcript.includes('thermal') || transcript.includes('flir') || transcript.includes('night')) {
+          toggleFLIR();
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.error('Speech recognition error:', e);
+        isListening = false;
+        document.getElementById('voice-btn').classList.remove('bg-red-600');
+      };
+
+      recognition.start();
+    }
+  </script>
+</body>
+</html>
