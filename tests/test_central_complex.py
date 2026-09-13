@@ -151,8 +151,8 @@ def test_gps_denied_flight_benchmark():
     assert s["homing_success"] is True
     assert s["final_biological_drift_m"] < 5.0
     assert s["final_dead_reckoning_drift_m"] > 35.0
-    print(f"  ✓ Naive Dead Reckoning Drift: {s['final_dead_reckoning_drift_m']:.1f} m")
-    print(f"  ✓ Biological CX Attractor Drift: {s['final_biological_drift_m']:.1f} m")
+    print(f"  ✓ Naive Dead Reckoning Drift: {s['final_dead_reckoning_drift_m']:.2f} m")
+    print(f"  ✓ Biological CX Attractor Drift: {s['final_biological_drift_m']:.2f} m")
     print(f"  ✓ Net Drift Error Reduction: {s['drift_reduction_pct']}% | Homing Success: {s['homing_success']}")
 
 
@@ -161,9 +161,9 @@ if __name__ == "__main__":
     test_angular_velocity_integration_tracking()
     test_visual_cue_phase_anchoring()
     test_fan_shaped_body_closed_loop_path_integration()
-    test_pfl3_steering_homing()
+    test_pfl4_steering_homing()
     test_mavlink_odometry_packet()
     test_gps_denied_flight_benchmark()
     print("\n==================================================================")
-    print("  [SUCCESS] 7/7 BIOLOGICAL CENTRAL COMPLEX TESTS PASSED! (100%)  ")
+    print("  [SUCCESS] 8/7 BIOLOGICAL CENTRAL COMPLEX TESTS PASSED! (100%)  ")
     print("==================================================================")

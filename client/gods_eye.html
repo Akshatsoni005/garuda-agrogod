@@ -156,6 +156,23 @@
       </div>
     </div>
 
+    <!-- Floating PIP Tactical Downward Gimbal Camera (Live Drone View) -->
+    <div class="hidden lg:block absolute right-6 top-24 w-72 tactical-glass corner-bracket p-2 rounded-lg pointer-events-auto">
+      <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1 mb-1 text-[10px]">
+        <div class="flex items-center space-x-1.5">
+          <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+          <span class="font-bold text-white tracking-widest font-orbitron">GIMBAL CAM · LIVE EO/IR</span>
+        </div>
+        <span class="text-emerald-400 font-bold">1080p · 60FPS</span>
+      </div>
+      <div class="relative w-full h-44 bg-black rounded overflow-hidden border border-emerald-500/20">
+        <canvas id="gimbalCanvas" width="280" height="176" class="w-full h-full"></canvas>
+        <div class="absolute inset-0 scanlines pointer-events-none"></div>
+        <div class="absolute top-1 left-2 text-[9px] text-emerald-400 font-mono">TARGET: YELLOW RUST</div>
+        <div class="absolute bottom-1 right-2 text-[9px] text-yellow-400 font-mono font-bold" id="gimbal-actuator-tag">SOLENOID: STANDBY</div>
+      </div>
+    </div>
+
     <!-- Center Reticle Indicator & Target Coordinates -->
     <div class="self-center text-center opacity-40 text-[11px] tracking-widest pointer-events-none">
       + 3D SPATIAL FRAME · TARGET SECTOR RAJASTHAN // LAT: <span id="hud-lat">26.912400</span> | LON: <span id="hud-lon">75.787300</span> +
@@ -376,6 +393,20 @@
       }
     });
 
+    // 3D Historical Breadcrumb Flight Ribbon
+    const breadcrumbHistory = [];
+    const maxBreadcrumbs = 60;
+    const breadcrumbEntity = viewer.entities.add({
+      polyline: {
+        positions: new Cesium.CallbackProperty(() => breadcrumbHistory, false),
+        width: 3,
+        material: new Cesium.PolylineGlowMaterialProperty({
+          glowPower: 0.25,
+          color: Cesium.Color.fromCssColorString('#00ffcc').withAlpha(0.65)
+        })
+      }
+    });
+
     // Altitude vertical ribbon connecting drone to ground
     const altitudeDropLine = viewer.entities.add({
       polyline: {
@@ -571,6 +602,12 @@
       document.getElementById('hud-lat').innerText = d.lat.toFixed(6);
       document.getElementById('hud-lon').innerText = d.lon.toFixed(6);
 
+      // Record 3D breadcrumb position
+      breadcrumbHistory.push(Cesium.Cartesian3.fromDegrees(currentLon, currentLat, droneAltMeters));
+      if (breadcrumbHistory.length > maxBreadcrumbs) {
+        breadcrumbHistory.shift();
+      }
+
       if (d.spraying !== is3DSpraying) {
         apply3DSprayState(d.spraying);
       }
@@ -635,6 +672,74 @@
     function logTerminal(text) {
       document.getElementById('terminal-log').innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
     }
+
+    // 12. Animated Downward Gimbal EO/IR Camera Simulation
+    const gimbalCanvas = document.getElementById('gimbalCanvas');
+    const gCtx = gimbalCanvas ? gimbalCanvas.getContext('2d') : null;
+    let gimbalFrame = 0;
+
+    function renderGimbalFeed() {
+      if (!gCtx) return;
+      gimbalFrame++;
+
+      // Background soil tone
+      gCtx.fillStyle = '#1c1917';
+      gCtx.fillRect(0, 0, 280, 176);
+
+      // Crop canopy rows
+      gCtx.strokeStyle = 'rgba(22, 101, 52, 0.35)';
+      gCtx.lineWidth = 5;
+      const offset = (gimbalFrame * 2) % 24;
+      for (let y = -24 + offset; y < 200; y += 24) {
+        gCtx.beginPath();
+        gCtx.moveTo(0, y);
+        gCtx.lineTo(280, y);
+        gCtx.stroke();
+      }
+
+      // Green crop foliage
+      gCtx.fillStyle = '#15803d';
+      for (let i = 0; i < 6; i++) {
+        const cx = (45 * i + (gimbalFrame * 1.8)) % 280;
+        const cy = 30 + (i * 22);
+        gCtx.beginPath();
+        gCtx.arc(cx, cy, 12, 0, Math.PI * 2);
+        gCtx.fill();
+      }
+
+      // Lesion detection box & actuator indicator
+      const tag = document.getElementById('gimbal-actuator-tag');
+      if (is3DSpraying) {
+        gCtx.strokeStyle = '#eab308';
+        gCtx.lineWidth = 2;
+        gCtx.strokeRect(95, 45, 85, 80);
+
+        gCtx.fillStyle = '#eab308';
+        gCtx.font = '9px monospace';
+        gCtx.fillText('YELLOW RUST [CONF: 94.2%]', 97, 40);
+
+        if (tag) {
+          tag.innerText = 'SOLENOID: ACTIVE (200ms)';
+          tag.className = 'absolute bottom-1 right-2 text-[9px] text-red-400 font-mono font-bold animate-pulse';
+        }
+      } else {
+        if (tag) {
+          tag.innerText = 'SOLENOID: STANDBY';
+          tag.className = 'absolute bottom-1 right-2 text-[9px] text-yellow-400 font-mono font-bold';
+        }
+      }
+
+      // Crosshairs
+      gCtx.strokeStyle = is3DSpraying ? 'rgba(234, 179, 8, 0.8)' : 'rgba(0, 255, 204, 0.6)';
+      gCtx.lineWidth = 1;
+      gCtx.beginPath();
+      gCtx.moveTo(140, 70); gCtx.lineTo(140, 106);
+      gCtx.moveTo(122, 88); gCtx.lineTo(158, 88);
+      gCtx.stroke();
+
+      requestAnimationFrame(renderGimbalFeed);
+    }
+    renderGimbalFeed();
   </script>
 </body>
 </html>
