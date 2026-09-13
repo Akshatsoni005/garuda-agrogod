@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GARUDA // AGRO-GOD COMMAND DECK</title>
   
-  <!-- Tailwind CSS & Lucide Icons via CDN -->
+  <!-- Tailwind CSS & Leaflet via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&display=swap');
     
     * { box-sizing: border-box; }
     body {
@@ -43,9 +43,8 @@
     }
     .tactical-border {
       border: 1px solid rgba(0, 255, 204, 0.3);
-      box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.08);
     }
-    /* Pulsing drone marker */
     .drone-radar-icon {
       position: relative;
       width: 28px;
@@ -79,31 +78,34 @@
 </head>
 <body class="relative w-screen h-screen">
 
-  <!-- Map Container -->
+  <!-- Map Canvas -->
   <div id="map"></div>
 
-  <!-- CRT Scanline Tactical Layer -->
+  <!-- CRT Scanlines Overlay -->
   <div id="scanline-layer" class="scanlines absolute inset-0 z-10 pointer-events-none"></div>
 
-  <!-- Tactical HUD Interface -->
+  <!-- Full Cockpit HUD -->
   <div class="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-4 md:p-6">
     
-    <!-- Header Command Bar -->
+    <!-- Top Tactical Navigation Bar -->
     <div class="flex justify-between items-center bg-gray-950/85 backdrop-blur-md tactical-border px-5 py-3 rounded-lg pointer-events-auto">
       <div class="flex items-center space-x-4">
         <div class="w-3.5 h-3.5 bg-emerald-400 rounded-full animate-ping"></div>
         <div>
-          <h1 class="text-xl md:text-2xl font-black tracking-widest text-emerald-400 font-orbitron">
-            GARUDA // AGRO-GOD
-          </h1>
-          <p class="text-[10px] text-gray-400 tracking-wider">AUTONOMOUS DUAL-DRONE FLEET & FARMLAND DIGITAL TWIN</p>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xl md:text-2xl font-black tracking-widest text-emerald-400 font-orbitron">
+              GARUDA // AGRO-GOD
+            </h1>
+            <span class="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-bold">OPENVRT v2.4</span>
+          </div>
+          <p class="text-[10px] text-gray-400 tracking-wider">AUTONOMOUS VRT FLEET COMMAND & SATELLITE DIGITAL TWIN</p>
         </div>
       </div>
 
-      <!-- Quick Metrics Bar -->
+      <!-- Live Mission Status Pill -->
       <div class="hidden lg:flex items-center space-x-6 text-xs">
         <div class="text-center">
-          <span class="text-gray-400 block text-[9px]">SATELLITE LINK</span>
+          <span class="text-gray-400 block text-[9px]">SATELLITE ORBIT</span>
           <span class="text-emerald-300 font-bold">SENTINEL-2A (10m)</span>
         </div>
         <div class="h-6 w-[1px] bg-emerald-500/30"></div>
@@ -113,20 +115,23 @@
         </div>
         <div class="h-6 w-[1px] bg-emerald-500/30"></div>
         <div class="text-center">
-          <span class="text-gray-400 block text-[9px]">CHEMICAL REDUCTION</span>
+          <span class="text-gray-400 block text-[9px]">PESTICIDE REDUCTION</span>
           <span class="text-emerald-400 font-bold text-sm">62.4% SAVED</span>
         </div>
         <div class="h-6 w-[1px] bg-emerald-500/30"></div>
         <div class="text-center">
-          <span class="text-gray-400 block text-[9px]">FARM SAVINGS</span>
-          <span class="text-yellow-400 font-bold text-sm">₹4,850 / HA</span>
+          <span class="text-gray-400 block text-[9px]">SPRAY DRIFT SAFETY</span>
+          <span id="drift-status" class="text-emerald-400 font-bold text-xs">OPTIMAL (3.2m Buffer)</span>
         </div>
       </div>
 
-      <!-- Mode Toggles -->
+      <!-- Quick Action Buttons -->
       <div class="flex space-x-2">
-        <button id="flir-btn" onclick="toggleFLIR()" class="bg-gray-900/90 hover:bg-gray-800 border border-emerald-500/50 text-emerald-300 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition">
+        <button onclick="toggleFLIR()" id="flir-btn" class="bg-gray-900/90 hover:bg-gray-800 border border-emerald-500/50 text-emerald-300 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition">
           FLIR Thermal
+        </button>
+        <button onclick="openRoiModal()" class="bg-emerald-950 hover:bg-emerald-900 border border-emerald-400 text-emerald-200 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition">
+          💰 Farmer ROI
         </button>
         <button id="voice-btn" onclick="toggleVoiceControl()" class="bg-gray-900/90 hover:bg-gray-800 border border-emerald-500/50 text-emerald-300 text-xs px-3 py-1.5 rounded uppercase tracking-wider font-bold transition flex items-center space-x-1">
           <span>🎤 Voice AI</span>
@@ -134,15 +139,15 @@
       </div>
     </div>
 
-    <!-- Center Reticle Indicator (Optional Cosmetic) -->
-    <div class="self-center text-center opacity-30 text-xs tracking-widest pointer-events-none">
-      + LAT: <span id="center-lat">26.9124</span> | LON: <span id="center-lon">75.7873</span> +
+    <!-- Center Reticle Indicator -->
+    <div class="self-center text-center opacity-40 text-[11px] tracking-widest pointer-events-none">
+      + SECTOR RAJASTHAN // LAT: <span id="center-lat">26.912400</span> | LON: <span id="center-lon">75.787300</span> +
     </div>
 
-    <!-- Bottom Controls & Telemetry Dock -->
+    <!-- Bottom Flight Deck & Mission Command Dock -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pointer-events-auto">
       
-      <!-- Panel 1: Live Drone Telemetry (from ESP32-S3 Beacon) -->
+      <!-- Panel 1: Live Drone Flight Telemetry -->
       <div class="bg-gray-950/90 backdrop-blur-md tactical-border p-4 rounded-lg space-y-2 text-xs">
         <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5">
           <span class="font-bold text-emerald-400 font-orbitron">DRONE ALPHA [TELEMETRY]</span>
@@ -154,91 +159,138 @@
           <div>ALTITUDE: <span id="drone-alt" class="text-white font-bold">14.5 m</span></div>
           <div>BATTERY: <span id="drone-bat" class="text-emerald-400 font-bold">98%</span></div>
           <div>VRT FLOW: <span id="vrt-flow" class="text-yellow-400 font-bold">0.0 L/min</span></div>
-          <div>GPS FIX: <span class="text-emerald-400 font-bold">RTK (±2cm)</span></div>
+          <div>SWATH: <span class="text-emerald-400 font-bold">4.0 m (8 Nozzles)</span></div>
         </div>
       </div>
 
-      <!-- Panel 2: Ground Field Station (from ESP32-S3 Base Station) -->
+      <!-- Panel 2: Ground Micro-Weather & Field Node -->
       <div class="bg-gray-950/90 backdrop-blur-md tactical-border p-4 rounded-lg space-y-2 text-xs">
         <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5">
           <span class="font-bold text-emerald-400 font-orbitron">GROUND FIELD NODE [IoT]</span>
-          <span class="text-[10px] text-gray-400">SECTOR 04</span>
+          <span class="text-[10px] text-gray-400">ESP32-S3 MESH</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-gray-300">
           <div>SOIL MOISTURE: <span id="field-soil" class="text-cyan-300 font-bold">42.5%</span></div>
           <div>TEMPERATURE: <span id="field-temp" class="text-white font-bold">29.8 °C</span></div>
           <div>HUMIDITY: <span id="field-humidity" class="text-white font-bold">58.2%</span></div>
-          <div>DISEASE RISK: <span class="text-yellow-400 font-bold">MODERATE (Rust)</span></div>
+          <div>WIND SPEED: <span id="field-wind" class="text-emerald-400 font-bold">8.5 km/h</span></div>
         </div>
       </div>
 
-      <!-- Panel 3: Tactical Action & VRT Controls -->
+      <!-- Panel 3: Autonomous Mission Dispatcher -->
       <div class="bg-gray-950/90 backdrop-blur-md tactical-border p-4 rounded-lg flex flex-col justify-between space-y-2">
         <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1.5 text-xs">
-          <span class="font-bold text-emerald-400 font-orbitron">VRT MISSION CONTROL</span>
+          <span class="font-bold text-emerald-400 font-orbitron">MISSION PLANNER</span>
           <span id="spray-status" class="text-yellow-400 font-bold">READY</span>
         </div>
-        <div class="flex space-x-2">
-          <button onclick="toggleNDVI()" id="ndvi-btn" class="flex-1 bg-emerald-950 hover:bg-emerald-900 border border-emerald-400 text-emerald-200 py-2.5 rounded text-xs font-bold uppercase tracking-wider transition">
-            Toggle NDVI Layer
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="toggleNDVI()" id="ndvi-btn" class="bg-emerald-950 hover:bg-emerald-900 border border-emerald-400 text-emerald-200 py-2 rounded text-[11px] font-bold uppercase transition">
+            NDVI Layer
           </button>
-          <button onclick="triggerVRTSpray()" id="spray-btn" class="flex-1 bg-yellow-600 hover:bg-yellow-500 border border-yellow-300 text-black py-2.5 rounded text-xs font-black uppercase tracking-wider transition shadow-[0_0_15px_rgba(234,179,8,0.4)]">
-            Launch Spot Spray
+          <button onclick="planVrtMission()" id="plan-btn" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-400 text-cyan-200 py-2 rounded text-[11px] font-bold uppercase transition">
+            Plan VRT Grid
+          </button>
+          <button onclick="triggerVRTSpray()" id="spray-btn" class="bg-yellow-600 hover:bg-yellow-500 border border-yellow-300 text-black py-2 rounded text-[11px] font-black uppercase transition">
+            Launch Spray
+          </button>
+          <button onclick="exportMavlink()" id="mav-btn" class="bg-gray-900 hover:bg-gray-800 border border-gray-500 text-gray-200 py-2 rounded text-[11px] font-bold uppercase transition">
+            Export MAVLink
           </button>
         </div>
-        <p id="voice-transcript" class="text-[10px] text-gray-400 italic truncate">Voice AI ready. Click 'Voice AI' to speak commands.</p>
+        <p id="voice-transcript" class="text-[10px] text-gray-400 italic truncate">Voice AI ready. Say "plan mission", "spray", or "ndvi".</p>
       </div>
 
     </div>
   </div>
 
-  <script>
-    // 1. Initialize Map with High-Resolution Satellite Tiles (Esri Satellite - No API Key Needed)
-    const farmCenter = [26.9124, 75.7873];
-    const map = L.map('map', {
-      zoomControl: false,
-      attributionControl: false
-    }).setView(farmCenter, 17);
+  <!-- Farmer ROI Modal -->
+  <div id="roi-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-gray-950 border border-emerald-400 p-6 rounded-xl max-w-md w-full text-xs space-y-4 shadow-[0_0_30px_rgba(0,255,204,0.2)]">
+      <div class="flex justify-between items-center border-b border-emerald-500/40 pb-2">
+        <h3 class="text-lg font-bold text-emerald-400 font-orbitron">FARMER UNIT ECONOMICS</h3>
+        <button onclick="closeRoiModal()" class="text-gray-400 hover:text-white text-lg font-bold">✕</button>
+      </div>
+      <p class="text-gray-300">Based on a standard 5-acre smallholder farm in India across 3 seasonal spray passes:</p>
+      <div class="bg-gray-900 p-4 rounded-lg space-y-2 border border-emerald-500/20">
+        <div class="flex justify-between"><span>Traditional Knapsack Cost:</span><span class="text-red-400 line-through">₹36,000</span></div>
+        <div class="flex justify-between"><span>Garuda Precision VRT Cost:</span><span class="text-emerald-400 font-bold">₹20,430</span></div>
+        <div class="border-t border-gray-700 pt-2 flex justify-between font-bold text-sm">
+          <span class="text-yellow-400">NET FARMER SAVINGS:</span>
+          <span class="text-yellow-400">₹15,570 (43.2% Total Saved)</span>
+        </div>
+        <div class="flex justify-between text-[11px] text-cyan-300 pt-1">
+          <span>Chemicals Eliminated:</span><span>62.0% Reduction</span>
+        </div>
+        <div class="flex justify-between text-[11px] text-cyan-300">
+          <span>Groundwater Saved:</span><span>2,700 Liters</span>
+        </div>
+      </div>
+      <button onclick="closeRoiModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-black py-2.5 rounded font-bold uppercase tracking-wider">
+        Acknowledge & Close
+      </button>
+    </div>
+  </div>
 
-    // High resolution satellite imagery layer
-    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  <script>
+    // 1. Synthetic Web Audio Feedback (Zero MP3 Assets Needed)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq = 880, type = 'sine', duration = 0.08) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // 2. Initialize Map with High-Resolution Satellite Tiles (Esri Satellite)
+    const farmCenter = [26.9124, 75.7873];
+    const map = L.map('map', { zoomControl: false, attributionControl: false }).setView(farmCenter, 17);
+
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19
     }).addTo(map);
 
-    // 2. Agricultural Farm Boundary Polygon
-    const farmPolygon = L.polygon([
+    // 3. Farm Boundary Polygon
+    const farmCoords = [
       [26.9135, 75.7858],
       [26.9135, 75.7888],
       [26.9113, 75.7888],
       [26.9113, 75.7858]
-    ], {
+    ];
+
+    const farmPolygon = L.polygon(farmCoords, {
       color: '#00ffcc',
       weight: 2,
       fillColor: '#00ffcc',
-      fillOpacity: 0.08,
-      dashArray: '5, 5'
+      fillOpacity: 0.06,
+      dashArray: '4, 4'
     }).addTo(map);
 
-    // 3. Simulated NDVI Stress Zones (Red = Infected Blight, Green = Healthy)
+    // 4. NDVI Stress Zones
     let ndviLayer = null;
     let isNdviActive = false;
+    const stressHotspot = { lat: 26.9128, lon: 75.7878, radius_m: 35.0 };
 
     function toggleNDVI() {
+      playBeep(1200);
       if (isNdviActive) {
         if (ndviLayer) map.removeLayer(ndviLayer);
         isNdviActive = false;
         document.getElementById('ndvi-btn').classList.remove('bg-emerald-600');
       } else {
-        // Red stress spot (representing yellow rust / pest infestation)
-        const stressSpot = L.circle([26.9128, 75.7878], {
-          radius: 35,
+        const stressSpot = L.circle([stressHotspot.lat, stressHotspot.lon], {
+          radius: stressHotspot.radius_m,
           color: '#ef4444',
           fillColor: '#ef4444',
           fillOpacity: 0.5,
           weight: 2
         });
-
-        // Healthy green region
         const healthySpot = L.circle([26.9120, 75.7865], {
           radius: 50,
           color: '#22c55e',
@@ -246,14 +298,66 @@
           fillOpacity: 0.35,
           weight: 1
         });
-
         ndviLayer = L.layerGroup([stressSpot, healthySpot]).addTo(map);
         isNdviActive = true;
         document.getElementById('ndvi-btn').classList.add('bg-emerald-600');
       }
     }
 
-    // 4. Custom 3D-Look Drone Radar Marker
+    // 5. Autonomous VRT Flight Path Generator
+    let missionLayer = null;
+
+    async function planVrtMission() {
+      playBeep(950, 'triangle', 0.15);
+      document.getElementById('plan-btn').innerText = 'Generating...';
+
+      try {
+        const res = await fetch('/api/mission/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            polygon: farmCoords,
+            swath_width_m: 6.0,
+            cruise_alt_m: 12.0,
+            stress_zones: [stressHotspot]
+          })
+        });
+        const data = await res.json();
+        renderFlightCorridors(data.waypoints);
+        document.getElementById('plan-btn').innerText = 'Plan VRT Grid';
+        playBeep(1500, 'sine', 0.2);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('plan-btn').innerText = 'Plan VRT Grid';
+      }
+    }
+
+    function renderFlightCorridors(waypoints) {
+      if (missionLayer) map.removeLayer(missionLayer);
+      
+      const elements = [];
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        const p1 = [waypoints[i].lat, waypoints[i].lon];
+        const p2 = [waypoints[i+1].lat, waypoints[i+1].lon];
+        const isSpray = waypoints[i].spraying || waypoints[i+1].spraying;
+
+        const line = L.polyline([p1, p2], {
+          color: isSpray ? '#eab308' : '#00ffcc',
+          weight: isSpray ? 4 : 2,
+          opacity: 0.85,
+          dashArray: isSpray ? null : '3, 6'
+        });
+        elements.push(line);
+      }
+      missionLayer = L.layerGroup(elements).addTo(map);
+    }
+
+    function exportMavlink() {
+      playBeep(800);
+      window.location.href = '/api/mission/export/mavlink';
+    }
+
+    // 6. Drone Marker & Live WebSocket
     const droneIcon = L.divIcon({
       className: 'drone-marker-container',
       html: `
@@ -268,18 +372,15 @@
 
     const droneMarker = L.marker(farmCenter, { icon: droneIcon }).addTo(map);
 
-    // 5. WebSocket Telemetry Ingestion from FastAPI Backend
-    const loc = window.location;
-    const wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = loc.hostname || 'localhost';
-    const wsPort = loc.port || '8000';
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = location.hostname || 'localhost';
+    const wsPort = location.port || '8000';
     const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}/ws/cockpit`;
 
     let isSpraying = false;
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      console.log('[WebSocket] Connected to AgroGod Telemetry Bridge');
       document.getElementById('esp-status').innerText = 'CONNECTED (LIVE)';
       document.getElementById('esp-status').classList.remove('text-yellow-400');
       document.getElementById('esp-status').classList.add('text-emerald-400');
@@ -287,7 +388,6 @@
 
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data);
-
       if (msg.type === 'DRONE_TELEMETRY' || (msg.type === 'INITIAL_STATE' && msg.data.drone)) {
         const d = msg.data.drone || msg.data;
         updateDroneHUD(d);
@@ -296,12 +396,9 @@
         updateFieldHUD(f);
       } else if (msg.type === 'VRT_STATUS_UPDATE') {
         applyVrtStatus(msg.data.spraying);
+      } else if (msg.type === 'MISSION_GENERATED') {
+        renderFlightCorridors(msg.data.waypoints);
       }
-    };
-
-    socket.onclose = () => {
-      document.getElementById('esp-status').innerText = 'STANDALONE (OFFLINE)';
-      document.getElementById('esp-status').classList.add('text-red-400');
     };
 
     function updateDroneHUD(d) {
@@ -309,12 +406,8 @@
       document.getElementById('drone-lon').innerText = d.lon.toFixed(6);
       document.getElementById('drone-alt').innerText = d.alt + ' m';
       document.getElementById('drone-bat').innerText = d.battery + '%';
-      
       droneMarker.setLatLng([d.lat, d.lon]);
-
-      if (d.spraying !== isSpraying) {
-        applyVrtStatus(d.spraying);
-      }
+      if (d.spraying !== isSpraying) applyVrtStatus(d.spraying);
     }
 
     function updateFieldHUD(f) {
@@ -350,25 +443,26 @@
         badgeEl.className = 'px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-500/40';
         sprayStatusEl.innerText = 'READY';
         sprayStatusEl.className = 'text-emerald-400 font-bold';
-        sprayBtn.innerText = 'LAUNCH SPOT SPRAY';
+        sprayBtn.innerText = 'LAUNCH SPRAY';
         sprayBtn.classList.replace('bg-red-600', 'bg-yellow-600');
       }
     }
 
     async function triggerVRTSpray() {
+      playBeep(spraying ? 600 : 1100);
       try {
         const res = await fetch('/api/vrt/toggle_spray', { method: 'POST' });
         const data = await res.json();
         applyVrtStatus(data.spraying);
       } catch (err) {
-        // Fallback for standalone demo
         applyVrtStatus(!isSpraying);
       }
     }
 
-    // 6. FLIR Thermal Vision Toggle
+    // 7. FLIR Thermal Mode
     let isFlir = false;
     function toggleFLIR() {
+      playBeep(1400);
       isFlir = !isFlir;
       const mapEl = document.getElementById('map');
       if (isFlir) {
@@ -380,14 +474,23 @@
       }
     }
 
-    // 7. Voice AI Commands (Web Speech API)
+    // 8. ROI Modal Controls
+    function openRoiModal() {
+      playBeep(1000);
+      document.getElementById('roi-modal').classList.remove('hidden');
+    }
+    function closeRoiModal() {
+      document.getElementById('roi-modal').classList.add('hidden');
+    }
+
+    // 9. Voice AI (Web Speech API)
     let recognition = null;
     let isListening = false;
 
     function toggleVoiceControl() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        alert('Web Speech API is not supported in this browser. Please use Chrome or Edge.');
+        alert('Web Speech API requires Chrome or Edge.');
         return;
       }
 
@@ -406,25 +509,27 @@
 
       recognition.onstart = () => {
         isListening = true;
+        playBeep(1200);
         document.getElementById('voice-btn').classList.add('bg-red-600', 'text-white');
-        document.getElementById('voice-transcript').innerText = 'Listening for commands: "spray", "ndvi", "flir"...';
+        document.getElementById('voice-transcript').innerText = 'Listening: "plan mission", "spray", "ndvi", "flir"...';
       };
 
       recognition.onresult = (event) => {
         const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
-        document.getElementById('voice-transcript').innerText = `Command recognized: "${transcript}"`;
+        document.getElementById('voice-transcript').innerText = `Heard: "${transcript}"`;
 
-        if (transcript.includes('spray') || transcript.includes('launch') || transcript.includes('start')) {
+        if (transcript.includes('spray') || transcript.includes('launch')) {
           triggerVRTSpray();
+        } else if (transcript.includes('plan') || transcript.includes('mission') || transcript.includes('grid')) {
+          planVrtMission();
         } else if (transcript.includes('ndvi') || transcript.includes('health') || transcript.includes('crop')) {
           toggleNDVI();
-        } else if (transcript.includes('thermal') || transcript.includes('flir') || transcript.includes('night')) {
+        } else if (transcript.includes('flir') || transcript.includes('thermal')) {
           toggleFLIR();
         }
       };
 
-      recognition.onerror = (e) => {
-        console.error('Speech recognition error:', e);
+      recognition.onerror = () => {
         isListening = false;
         document.getElementById('voice-btn').classList.remove('bg-red-600');
       };

@@ -1,15 +1,15 @@
 """
 Garuda AgroGod - Central Tactical Bridge & Telemetry Server
-Ponytail: Single-file backend serving REST endpoints, WebSockets, and static client.
+Ponytail: Single-file backend serving REST endpoints, WebSockets, MAVLink mission export, and static client.
 Zero complex microservices. Runs locally on port 8000.
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
-from typing import Optional, Set
+from typing import Optional, Set, List, Tuple, Dict, Any
 import asyncio
 import json
 import os
@@ -18,6 +18,7 @@ import sys
 # Add parent directory for module imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from ml.diagnose import evaluate_crop_health, calculate_ndvi
+from server.planner import generate_vrt_flight_mission, export_mavlink_wpl110, calculate_spray_drift
 
 app = FastAPI(title="Garuda AgroGod Command Bridge")
 
@@ -31,7 +32,9 @@ app.add_middleware(
 
 connected_websockets: Set[WebSocket] = set()
 
-# State memory
+# In-memory flight mission cache
+latest_mission_cache: Dict[str, Any] = {}
+
 current_state = {
     "drone": {
         "device_id": "garuda_drone_alpha",
@@ -50,6 +53,12 @@ current_state = {
         "humidity_pct": 58.0,
         "soil_moisture_pct": 42.0
     },
+    "weather": {
+        "wind_speed_kmh": 8.5,
+        "wind_direction_deg": 140,
+        "safety_status": "OPTIMAL_CONDITIONS",
+        "recommended_buffer_m": 3.2
+    },
     "vrt_stats": {
         "status": "STANDBY",
         "chemical_saved_pct": 62.4,
@@ -59,7 +68,6 @@ current_state = {
 }
 
 async def broadcast(message: dict):
-    """Broadcast JSON message to all active cockpit UI clients."""
     payload = json.dumps(message)
     for ws in list(connected_websockets):
         try:
@@ -84,11 +92,16 @@ class FieldPacket(BaseModel):
     humidity_pct: float
     soil_moisture_pct: float
 
-class DiagnosisRequest(BaseModel):
-    nir: float = 0.62
-    red: float = 0.22
-    symptom: str = "yellow_rust"
-    field_area_ha: float = 2.5
+class MissionRequest(BaseModel):
+    polygon: List[List[float]] # [[lat, lon], ...]
+    swath_width_m: float = 6.0
+    cruise_alt_m: float = 12.0
+    stress_zones: Optional[List[Dict[str, Any]]] = None
+
+class RoiRequest(BaseModel):
+    farm_area_acres: float = 5.0
+    crop_type: str = "Wheat"
+    spray_passes_per_season: int = 3
 
 @app.post("/api/telemetry/drone")
 async def receive_drone_telemetry(data: DronePacket):
@@ -117,23 +130,81 @@ async def toggle_vrt_spray():
     })
     return {"status": "ok", "spraying": current_state["drone"]["spraying"]}
 
-@app.post("/api/crop/diagnose")
-async def run_crop_diagnosis(req: DiagnosisRequest):
-    ndvi = calculate_ndvi(req.nir, req.red)
-    res = evaluate_crop_health(ndvi, req.symptom, req.field_area_ha)
-    await broadcast({"type": "CROP_DIAGNOSIS_RESULT", "data": res})
-    return res
+@app.post("/api/mission/generate")
+async def api_generate_mission(req: MissionRequest):
+    global latest_mission_cache
+    polygon_tuples = [(p[0], p[1]) for p in req.polygon]
+    mission = generate_vrt_flight_mission(
+        polygon_coords=polygon_tuples,
+        swath_width_m=req.swath_width_m,
+        cruise_alt_m=req.cruise_alt_m,
+        stress_zones=req.stress_zones
+    )
+    latest_mission_cache = mission
+    await broadcast({"type": "MISSION_GENERATED", "data": mission})
+    return mission
+
+@app.get("/api/mission/export/mavlink")
+async def export_mavlink():
+    global latest_mission_cache
+    if not latest_mission_cache or "waypoints" not in latest_mission_cache:
+        # Default fallback sample mission
+        sample_field = [(26.9135, 75.7858), (26.9135, 75.7888), (26.9113, 75.7888), (26.9113, 75.7858)]
+        latest_mission_cache = generate_vrt_flight_mission(sample_field)
+
+    mavlink_content = export_mavlink_wpl110(latest_mission_cache["waypoints"])
+    return PlainTextResponse(
+        mavlink_content,
+        headers={"Content-Disposition": "attachment; filename=garuda_vrt_mission.waypoints"}
+    )
+
+@app.get("/api/weather/drift")
+async def get_drift_status(wind_kmh: float = 8.5):
+    drift = calculate_spray_drift(wind_kmh)
+    current_state["weather"]["wind_speed_kmh"] = wind_kmh
+    current_state["weather"]["safety_status"] = drift["safety_status"]
+    current_state["weather"]["recommended_buffer_m"] = drift["recommended_buffer_m"]
+    return drift
+
+@app.post("/api/farmer/roi")
+async def calculate_farmer_roi(req: RoiRequest):
+    # Standard agricultural metrics for Indian smallholders
+    chemical_cost_per_acre_inr = 1800 # Pesticides/fungicides per acre
+    water_liters_per_acre_manual = 200 # Heavy knapsack water wastage
+    water_liters_per_acre_drone = 20   # Ultra-low-volume ULV spray
+    labor_cost_per_acre_inr = 600     # Manual spraying labor
+    drone_faas_cost_per_acre_inr = 450 # Garuda FaaS booking charge
+
+    total_acres = req.farm_area_acres * req.spray_passes_per_season
+    traditional_cost = (chemical_cost_per_acre_inr + labor_cost_per_acre_inr) * total_acres
+    
+    # Garuda precision VRT: 62% pesticide reduction
+    garuda_chemical_cost = (chemical_cost_per_acre_inr * 0.38) * total_acres
+    garuda_service_cost = drone_faas_cost_per_acre_inr * total_acres
+    garuda_total_cost = garuda_chemical_cost + garuda_service_cost
+    
+    net_savings_inr = round(traditional_cost - garuda_total_cost, 0)
+    water_saved_liters = round((water_liters_per_acre_manual - water_liters_per_acre_drone) * total_acres, 0)
+    chemical_saved_pct = 62.0
+
+    return {
+        "farm_area_acres": req.farm_area_acres,
+        "traditional_total_cost_inr": traditional_cost,
+        "garuda_vrt_cost_inr": garuda_total_cost,
+        "net_money_saved_inr": net_savings_inr,
+        "water_saved_liters": water_saved_liters,
+        "chemical_saved_pct": chemical_saved_pct,
+        "payback_period": "Immediate (First Spray Session)"
+    }
 
 @app.websocket("/ws/cockpit")
 async def cockpit_websocket(websocket: WebSocket):
     await websocket.accept()
     connected_websockets.add(websocket)
-    # Send initial state snapshot on connection
     await websocket.send_text(json.dumps({"type": "INITIAL_STATE", "data": current_state}))
     try:
         while True:
             msg = await websocket.receive_text()
-            # Handle client commands if any
             try:
                 cmd = json.loads(msg)
                 if cmd.get("action") == "TOGGLE_SPRAY":
@@ -143,7 +214,6 @@ async def cockpit_websocket(websocket: WebSocket):
     except WebSocketDisconnect:
         connected_websockets.discard(websocket)
 
-# Serve client assets
 CLIENT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "client"))
 if os.path.exists(CLIENT_DIR):
     app.mount("/static", StaticFiles(directory=CLIENT_DIR), name="static")
@@ -153,7 +223,7 @@ async def root():
     index_file = os.path.join(CLIENT_DIR, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
-    return {"message": "Garuda AgroGod API is running. Client folder not found."}
+    return {"message": "Garuda AgroGod API is running."}
 
 if __name__ == "__main__":
     import uvicorn
